@@ -6,6 +6,7 @@ highlight-style: pygments
 format:
   html: 
     code-fold: true
+    code-copy: true
     theme:
       light: flatly
       dark: darkly
@@ -372,7 +373,7 @@ In addition, an AS event can be measured at different sequencing depths. In `vas
 
 Here I check if the quality score of the events changes when including or excluding the super sample.
 
-```{r, check the number of events by quality score, fig.width = 15, fig.height = 8}
+```{r, check_number_events_by_quality_score, fig.width = 15, fig.height = 8}
 ggplot(cmpr_events) +
   aes(x = Quality_Score_Value, fill = comparison) +
   facet_grid(~COMPLEX)  +  
@@ -415,7 +416,7 @@ fltrd_cmpr_events <- subset(cmpr_events, as.integer(Quality_Score_Value) >= 2)
 
 ...and repeating the plot.
 
-```{r, QC plot after compare filtering, fig.width = 15, fig.height = 8}
+```{r, QC_plot_after_compare_filtering, fig.width = 15, fig.height = 8}
 ggplot(fltrd_cmpr_events) +
   aes(x = Quality_Score_Value, fill = comparison) +
   facet_grid(~COMPLEX)  +  
@@ -491,7 +492,7 @@ intersection_cmpr_plt <- upset(fromList(events_li), nsets = length(comparisons),
 
 Show the overlap as an upset plot:
 
-```{r, show upset plot all, fig.width = 12, fig.height = 6}
+```{r, show_upset_plot_all, fig.width = 12, fig.height = 6}
 intersection_cmpr_plt
 ```
 
@@ -526,7 +527,7 @@ cmpr_events_mrgd <- subset(fltrd_cmpr_events, comparison %in% c('TAF2OE_mrgd', '
 
 Check the overall quality / confidence of the `uniq` events
 
-```{r, make to plot event quality score plot, fig.height = 9, fig.width = 7}
+```{r, plot_event_quality_score, fig.height = 9, fig.width = 7}
 plot_quality_score_stacked(cmpr_events_uniq) +
   labs(title = 'UNIQ comparison') -> p_cmpr_scores_bars_uniq
 
@@ -547,7 +548,7 @@ ggsave(filename = '04_Compare_DSE_Score_Bar.pdf', plot = p_cmrp_scores_bar,
 
 Check the distribution of ∆PSI using a histogram with binwidth of 1.
 
-```{r, make grouped dPSI histogram, fig.width = 8, fig.height = 5}
+```{r, make_grouped_dPSI_histogram, fig.width = 8, fig.height = 5}
 plot_dPSI_hist_grpd(data = cmpr_events_uniq) +
   labs(title = 'UNIQ comparison') -> p_cmpr_dPSI_hist_uniq
 
@@ -573,7 +574,7 @@ ggsave(filename = '05_compare_DSE_dPSI_Hist.pdf', plot = p_cmpr_dPSI_hist,
 
 In the boxplot filled circle points indicate individual replicates, while the square points indicate the merge super-sample between the 3 replicates.
 
-```{r, plot some events of both both kind, fig.width = 9, fig.height = 5}
+```{r, plot_some_events_both_both_kind, fig.width = 9, fig.height = 5}
 both_TAF2OE_ids <- events_li$TAF2OE_mrgd[(events_li$TAF2OE_mrgd %in% events_li$TAF2OE_uniq)]
 message(length(both_TAF2OE_ids), ' DSEs in TAF2 OE mrgd and uniq')
 
@@ -605,7 +606,7 @@ ggsave(filename = '06_compare_DSE_PSI_boxplot.pdf', plot = last_plot(),
 
 Check events that are differentially spliced in the super sample but not in the 3-replicate comparison.
 
-```{r, plot some events of in the super sample but not in rep comparions, fig.width = 9, fig.height = 5}
+```{r, plot_some_events_super_sample_but_not_in_rep_comparions, fig.width = 9, fig.height = 5}
 mrgd_not_uniq_TAF2OE_ids <- events_li$TAF2OE_mrgd[!(events_li$TAF2OE_mrgd %in% events_li$TAF2OE_uniq)]
 message(length(mrgd_not_uniq_TAF2OE_ids), ' DSEs in TAF2 OE mrgd but not in TAF2 OE uniq')
 
@@ -651,7 +652,7 @@ ggsave(filename = '07_compare_DSE_PSI_boxplot.pdf', plot = last_plot(),
 
 Check one specific event in the gene TAF2.
 
-```{r, plot uniq events, fig.width = 3, fig.height = 2}
+```{r, plot_uniq_events, fig.width = 3, fig.height = 2}
 subset(cmpr_events, EVENT %in% 'HsaEX0063481') |>
   plot_PSI_boxplot(num_col = 4) +
   theme(legend.position = 'none') 
@@ -716,7 +717,7 @@ tidy_events |>
 
 Plot the PCA using the function `showme_PCA2D` form my R package and save it.
 
-```{r, Plot PCA}
+```{r, Plot_PCA}
 showme_PCA2D(log2(tidy_mat), mt = mtdf, mcol = 'Sample', real_aspect_ratio = T,
              m_fill = 'OE', m_label = 'PrettySample', n_top_var = 1000) 
 
@@ -728,7 +729,7 @@ ggsave(filename = '09_tidy_PCA.pdf', plot = last_plot(),
 
 Samples group well between each other. Principal component one separates based on the OE, while component two separates more the TAF2 ∆IDR from the other 2. The next plot shows how much variance each component explains.
 
-```{r, PCA 3}
+```{r, Plot_PCA_var}
 showme_PCA2D(log2(tidy_mat), mt = mtdf, mcol = 'Sample', show_variance = T, 
              real_aspect_ratio = F, m_fill = 'OE', m_label = 'PrettySample', 
              n_top_var = 1000) 
@@ -736,7 +737,7 @@ showme_PCA2D(log2(tidy_mat), mt = mtdf, mcol = 'Sample', show_variance = T,
 
 Check which events are the most prominent on component 1.
 
-```{r, show loading component 1}
+```{r, show_loading_PC1}
 showme_PCA2D(log2(tidy_mat), mt = mtdf, mcol = 'Sample', n_loadings = 10,
              n_top_var = 1000) 
 ```
@@ -752,7 +753,7 @@ showme_PCA2D(log2(tidy_mat), mt = mtdf, mcol = 'Sample', n_loadings = 10,
 
 Explore the samples with a heatmap of the AS events. First let's check how many events are missing the PSI (e.g. not enough coverage). In the next heatmap white represent `NA` values and black represent a quantification (from 0 to 100). Of course the merged super samples have more coverage. I don't think there's a specific patter and I'd say that the values are missing at random.
 
-```{r, heatmap NA values, fig.width = 5, fig.height = 8}
+```{r, heatmap_NA_values, fig.width = 5, fig.height = 8}
 pheatmap(tidy_mat, na_col = 'white', cluster_rows = F, cluster_cols = T,
          legend = F, show_rownames = F, color = 'black', 
          main = paste0( nrow(tidy_mat), ' AS events' ) )
@@ -760,7 +761,7 @@ pheatmap(tidy_mat, na_col = 'white', cluster_rows = F, cluster_cols = T,
 
 Since the the super samples have more coverage let's plot only the AS events in those 3 columns. `NA` are again displayed in white.
 
-```{r, heatmap super samples, fig.width = 3, fig.height = 8}
+```{r, heatmap_super_samples, fig.width = 3, fig.height = 8}
 mat <- tidy_mat[, c('HeLa_FRT', 'HeLa_TAF2', 'HeLa_NLSTAF2dIDR')]
 colnames(mat) <- gsub('HeLa_', '',  colnames(mat))
 
@@ -772,7 +773,7 @@ rm(mat)
 
 The control sample separates from the other 2 OE. Now with the replicates only. Since the replicates have some `NA`s let's try to select only the events with at least coverage in 5 out of all 9 samples.
 
-```{r, select by coverage and make heatmap, fig.width = 5, fig.height = 8}
+```{r, select_coverage_and_make_heatmap, fig.width = 5, fig.height = 8}
 tidy_events |> 
   left_join(y = mtdf, by = join_by(Sample) ) |>
   subset(Replicate != 'Merge' ) |>
@@ -793,7 +794,7 @@ pheatmap(tidy_fltrd_mat, na_col = 'white', cluster_rows = T, cluster_cols = T,
 
 Now plot only the events that have full coverage in across all 9 samples.
 
-```{r, heatmap full coverage across replicates, fig.width = 5, fig.height = 8}
+```{r, heatmap_full_coverage_across_replicates, fig.width = 5, fig.height = 8}
 tidy_events |> 
   left_join(y = mtdf, by = join_by(Sample) ) |>
   subset(Replicate != 'Merge' ) |>
@@ -814,7 +815,7 @@ pheatmap(tidy_full_mat, cluster_rows = T, cluster_cols = T, treeheight_col = 25,
 
 Now check how events change between conditions, to do this I calculate the z score to scale the PSI of each event between the the super samples.
 
-```{r, heatmap zscores super sample, fig.width = 4, fig.height = 8}
+```{r, heatmap_zscores_super_sample, fig.width = 4, fig.height = 8}
 tidy_events |> 
   left_join(y = mtdf, by = join_by(Sample) ) |>
   subset(Replicate == 'Merge' ) |>
@@ -839,7 +840,7 @@ The effect of the change (i.e. PSI between different conditions) is colour coded
 
 For sake of completeness I apply the logit transformation to the PSI, that tends to scale them a bit better as they are not bounded between 0 and 100 any more by between -infinity  and + infinity. So the events that are either 0 or 100 in one case need to be removed.
 
-```{r, heatmap of logit transformation, fig.width = 4, fig.height = 8, evel = F}
+```{r, heatmap_logit_transformation, fig.width = 4, fig.height = 8, evel = F}
 logit_tidy_full_mat <- log10(tidy_full_mat / (100-tidy_full_mat))
 
 # select only finite events (PSI = 0, and 100 are removed in the logit transformation)
@@ -866,7 +867,7 @@ zScore(tidy_full_mat) |>
 
 Check their PSI distribution across samples. Since the `tidy` table does not contain the quality scores and the PSI of these events in not present in the `compare` table I get the PSI from the full inclusion table.
 
-```{r, psi plot logit, message = FALSE, fig.width = 8, fig.height = 5}
+```{r, psi_plot_logit, message = FALSE, fig.width = 8, fig.height = 5}
 grep_psi(inclusion_tbl = psi_path, vst_id = top_bottom_events_logit) |>
   tidy_vst_psi() -> top_bottom_psi_logit
 
@@ -959,7 +960,7 @@ test_taf2_dat$PSI_Norm <- rnorm(n = length(test_taf2_dat$PSI),
 
 The first test I do is simply checking the real data and the theoretical normal distributions
 
-```{r}
+```{r, histrogram_PSI_binned}
 test_taf2_dat |>
   pivot_longer(cols = starts_with('PSI')) |>
   ggplot( aes(x = value, fill = name) ) +
@@ -971,7 +972,7 @@ test_taf2_dat |>
 
 The real data is inflated for zeros (full skipping) and 100 (full inclusion) which expected, however the PSI in the middle to resemble a normal distribution, in fact binning the data into 10 bins shows a more similar overlap
 
-```{r, make a histrograme of the PSI binned distribution and of a normally distributed PSI}
+```{r, histrogram_PSI_binned_distribution_and_normally_distributed_PSI}
 test_taf2_dat |>
   pivot_longer(cols = starts_with('PSI')) |>
   ggplot( aes(x = value, fill = name) ) +
@@ -982,7 +983,7 @@ test_taf2_dat |>
 ```
 
 Lastly I do a quantile-quantile plot: 
-```{r, make a qq plot}
+```{r, qq_plot}
 test_taf2_dat |>
   ggplot(aes(sample = PSI)) +
     stat_qq() + stat_qq_line() + coord_cartesian(ylim = c(-10, 110)) + theme_bw()
@@ -1024,7 +1025,7 @@ tidy_dPSI_df |>
 ```
 
 I also check the *P*-value distribution.
-```{r, check pvalue distribution}
+```{r, check_pvalue_distribution}
 tidy_dPSI_pval |>
   select(EVENT, p_TAF2, p_TAF2dIDR) |>
   pivot_longer(cols = starts_with("p")) |>
@@ -1069,7 +1070,7 @@ tidy_dPSI_pval |>
 
 Volcano plot of TAF2 OE. Points with \|∆PSI\| \> `r dPSI_squish` are squished on the sides of the plot.
 
-```{r, volcano plot TAF2, fig.width = 5, fig.height = 6, warning = FALSE, message = FALSE}
+```{r, volcano_plot_TAF2, fig.width = 5, fig.height = 6, warning = FALSE, message = FALSE}
 # select fewer columns for plotting
 subset(tidy_dPSI_pval, OE == 'TAF2') |>
   select(GENE, EVENT, dPSI_TAF2, p_TAF2, padj_TAF2, DSE_TAF2) |>
@@ -1110,7 +1111,7 @@ ggsave(filename = '10_tidy_TAF2_Volcano.pdf', plot = last_plot(),
 
 Select the differentially spliced events in TAF2 OE and plot only the exon skipping events.
 
-```{r, select stat TAF2, message = TRUE, fig.height=5.8, fig.width=10}
+```{r, select_stat_TAF2, message = TRUE, fig.height=5.8, fig.width=10}
 stat_TAF2 <- unique(subset(plot_TAF2, DSE_TAF2)$EVENT)
 message(length(stat_TAF2), ' significant events with low ∆PSI in TAF2 OE')
 
@@ -1137,7 +1138,7 @@ So in this way we don't have to lower the ∆PSI threshold and risk of obtaining
 
 Volcano plot of NLS-TAF2 ∆IDR OE. Points with \|∆PSI\| \> `r dPSI_squish` are squished on the sides of the plot.
 
-```{r, volcano plot TAF2 dIDR, fig.width = 5, fig.height = 6, warning = FALSE, message = FALSE}
+```{r, volcano_plot_TAF2_dIDR, fig.width = 5, fig.height = 6, warning = FALSE, message = FALSE}
 subset(tidy_dPSI_pval, OE == 'NLSTAF2dIDR') |>
   select(GENE, EVENT, dPSI_TAF2dIDR, p_TAF2dIDR, padj_TAF2dIDR, DSE_TAF2dIDR) |>
   unique() -> plot_TAF2dIDR
@@ -1177,7 +1178,7 @@ ggsave(filename = '11_tidy_TAF2dIDR_Volcano.pdf', plot = last_plot(),
 
 Select the differentially spliced events in TAF2 ∆IDR OE and plot some of the events.
 
-```{r, select stat TAF2dIDR, message = TRUE, fig.height = 5.5, fig.width = 9}
+```{r, select_stat_TAF2dIDR, message = TRUE, fig.height = 5.5, fig.width = 9}
 stat_TAF2dIDR <- unique(subset(plot_TAF2dIDR, DSE_TAF2dIDR)$EVENT)
 
 message(length(stat_TAF2dIDR), ' significant events with low ∆PSI in TAF2 ∆IDR OE')
@@ -1261,13 +1262,13 @@ Interestingly not many events are common between the 2 OE.
 
 Plot the actual ∆PSI of the events that were filtered to have a minimum value of \|∆PSI\| \>=15 with a 95% confidence.
 
-```{r, diff TAF2 hist, fig.width = 6, fig.height = 4}
+```{r, diff_TAF2_hist, fig.width = 6, fig.height = 4}
 plot_hist_dPSI(diff_TAF2)
 ```
 
 There seem to be a good balance between up and down regulated events.
 
-```{r, diff TAF2 dIDR hist, fig.width = 6, fig.height = 4}
+```{r, diff_TAF2_dIDR_hist, fig.width = 6, fig.height = 4}
 plot_hist_dPSI(diff_TAF2dIDR)
 ```
 
@@ -1332,7 +1333,6 @@ Now that the DSEs have been identified by each method it's time to check how man
 
 ## integrate all events
 
-
 Continue from here. Thu Aug  3 21:28:46 2023
 
 Check the number of DSE found by each method.
@@ -1357,7 +1357,7 @@ intersection_methods_ids <- upset(fromList(dse_list_uniq), nsets = length(dse_li
 
 Show the number and overlap of events found by each method with an upset plot:
 
-```{r, show upset plot all, fig.width = 7, fig.height = 5.5}
+```{r, show_upset_plot_all2, fig.width = 7, fig.height = 5.5}
 intersection_methods_ids
 ```
 
@@ -1382,7 +1382,7 @@ intersection_methods_ids_mrgd <- upset(fromList(dse_list_mrgd), nsets = length(d
 
 Show the number and overlap of events found by each method with an upset plot:
 
-```{r, show upset plot all with mrgd, fig.width = 10, fig.height = 6}
+```{r, show_upset_plot_all_with_mrgd, fig.width = 10, fig.height = 6}
 intersection_methods_ids_mrgd
 ```
 
@@ -1498,7 +1498,7 @@ Interestingly each method
 
 From the 3 different methods.
 
-```{r}
+```{r, echo = F, eval = F}
 cmpr_events |> 
   select(!dPSI) |>
   mutate(method = 'compare') -> set_cmpr
@@ -1510,12 +1510,10 @@ tidy_events |>
 
 diff_psi_df |>
   mutate(method = 'diff') |>
-  mutate()
-
-# -> set_diff
+  mutate() -> set_diff
 ```
 
-```{r, }
+```{r, echo = F, eval = F }
 cols_to_keep <- c("GENE", 'EVENT', 'Sample', 'PSI', 'method')
 
 rbind( unique(set_cmpr[, cols_to_keep]) ,
@@ -1533,7 +1531,7 @@ ALL_DSE_WIDE |>
 
 Plot how many Differentially Spliced Events by method?
 
-```{r, DSE plot count, fig.width = 3, fig.height = 5}
+```{r, DSE_plot_count, fig.width = 3, fig.height = 5, echo = F, eval = F}
 ggplot(num_DSE) +
   aes(x = method, y = num, fill = method) +
   geom_col( colour = 'black', show.legend = F, linewidth = 0.2 ) +
@@ -1549,7 +1547,7 @@ ggplot(num_DSE) +
         axis.ticks.x = element_blank(),
         axis.title.x = element_blank())
 
-ggsave(filename = 'Num_DSE_Bar.pdf', plot = last_plot(), 
+ggsave(filename = '99_Num_DSE_Bar.pdf', plot = last_plot(), 
        device = cairo_pdf, path = expr_dir, units = 'cm', width = 4,
        height = 7)
 
@@ -1557,7 +1555,7 @@ ggsave(filename = 'Num_DSE_Bar.pdf', plot = last_plot(),
 
 Show as a stacked bar plot
 
-```{r, DSE plot count stacked, fig.width = 5, fig.height = 1}
+```{r, DSE_plot_count_stacked, fig.width = 5, fig.height = 1, echo = F, eval = F}
 ggplot(num_DSE, aes(fill = method, x = num, y = 'method')) + 
     geom_bar(position = "stack", stat = "identity", colour = 'black', show.legend = T, linewidth = 0.2 ) +
     labs(x = 'Num of DSE') +
@@ -1576,7 +1574,7 @@ ggplot(num_DSE, aes(fill = method, x = num, y = 'method')) +
 
 In total there are \~450 events that are the most likely differentially spliced.
 
-```{r}
+```{r, echo = F, eval = F}
 cmpr_ids <- subset(ALL_DSE_WIDE, method == 'compare')$EVENT
 tidy_ids <- subset(ALL_DSE_WIDE, method == 'tidy')$EVENT
 diff_ids <- subset(ALL_DSE_WIDE, method == 'diff')$EVENT
@@ -1587,7 +1585,7 @@ names(method_ids) <- c('compare', 'tidy', 'diff')
 
 How many of these dse overlap?
 
-```{r, show overlap of the method}
+```{r, show_overlap_method, echo = F, eval = F}
 upset(fromList(method_ids), nsets = length(method_ids),
                                text.scale = 1.5, nintersects = NA, 
                                mb.ratio = c(0.6, 0.4), decreasing = c(T, F),
@@ -1606,7 +1604,7 @@ So all in all it kind of makes sense that the overlap between the 3 methods is v
 
 Export a table with the events
 
-```{r}
+```{r, echo = F, eval = F}
 # fix a case in which there's no gene name for an event
 ALL_DSE_WIDE <- ALL_DSE_WIDE |>
   mutate(GENE = ifelse(test = GENE == '', yes = 'missing_NA', no = GENE) )
@@ -1617,7 +1615,7 @@ write_delim(x = ALL_DSE_WIDE,
 
 To check if there are also alternative splice sites events coming from the same region I run this command line in the terminal
 
-```{sh, eval = F}
+```{sh, echo = F, eval = F}
 cat DSE_3methods.tab | sort -k2 | cut -f 2 | sed 's/\-[0-9]\/[0-9]$//' | \
   sort | uniq -c | sort -k1 | \
   awk '{ if ($1 >= 2) print $2}' > DSE_More_1_Method.tab
@@ -1627,5 +1625,4 @@ cat DSE_3methods.tab | sort -k2 | cut -f 2 | sed 's/\-[0-9]\/[0-9]$//' | \
 
 ```{r, print session info}
 sessioninfo::session_info()
-
 ```
