@@ -1,0 +1,23 @@
+# System files
+.fuse_hidden*
+.DS_Store
+._.DS_Store
+._*
+
+# Temporary files created by R markdown
+*.utf8.md
+*.knit.md
+
+# Session Data files
+.RData
+
+# History files
+.Rhistory
+.Rapp.history
+
+# Old/temp R files
+src/R/*.R
+
+# for initial comit, then after clean up add it
+vast_tools/*
+plots/*
