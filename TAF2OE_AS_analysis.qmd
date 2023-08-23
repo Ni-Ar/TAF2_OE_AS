@@ -5,7 +5,7 @@ number-sections: true
 highlight-style: pygments
 format:
   html:
-    self-contained: true 
+    embed-resources: true
     code-fold: true
     code-copy: true
     theme:
