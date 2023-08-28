@@ -18,6 +18,34 @@
 # Old/temp R files
 src/R/*.R
 
-# for initial comit, then after clean up add it
-vast_tools/*
-plots/*
+## for initial comit, then after clean up add it
+
+# vast_out
+vast_tools/vast_out/*.tab
+vast_tools/vast_out/diff_*/min_dPSI*
+vast_tools/vast_out/compare_*/min_dPSI*
+vast_tools/vast_out/tidy_*/INCLUSION_LEVELS_TIDY*
+
+# vast_tools
+vast_tools/*.tab
+
+## Never commit 
+# vast-tools intermediate files
+vast_tools/vast_out/VTS_LOG_commands.txt
+vast_tools/vast_out/*.log
+vast_tools/vast_out/tmp/*
+vast_tools/vast_out/to_combine/*
+vast_tools/vast_out/expr_out/*
+vast_tools/vast_out/raw_incl/*
+vast_tools/vast_out/raw_reads/*
+
+# matt intermediate files
+your_requests_to_matt.txt
+vast_tools/matt_*/*.tex
+vast_tools/matt_*/*.log
+vast_tools/matt_*/*.out
+vast_tools/matt_*/*.cls
+vast_tools/matt_*/*.aux
+vast_tools/matt_*/*.toc
+vast_tools/matt_*/*.sty
+vast_tools/matt_*/summary_graphics/*
