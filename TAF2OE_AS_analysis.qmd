@@ -10,7 +10,7 @@ format:
     code-copy: true
     theme:
       light: flatly
-      dark: darkly§
+      dark: darkly
 editor: source
 bibliography: AS_references.bib
 ---
@@ -25,7 +25,7 @@ Alternative splicing (AS) events included in this analysis:
 
 3.  intron retentions
 
-For each sample AS events were quantified using the percentage of sequence inclusion (PSI) metric, which is a number ranging from zero and 100, corresponding to full sequence skipping or full sequence inclusion in all transcripts of a gene, respectively. For example, constitutively spliced exons have a PSI of 100. The PSI cannot be calculated for the very first and last exons of a gene.
+For each sample AS events were quantified using the percentage of sequence inclusion (PSI) metric, which is a number ranging from zero to 100, corresponding to full sequence skipping or full sequence inclusion in all transcripts of a gene, respectively. For example, constitutively spliced exons have a PSI of 100. The PSI cannot be calculated for the very first and last exons of a gene.
 
 These documents reports the downstream AS analysis after processing the samples with VAST-TOOLS[@Tapial2017] using the following steps:
 
@@ -68,8 +68,6 @@ Full inclusion table was filtered using `vast-tools tidy` with: `--noB3`, `--p_I
 ## diff
 
 Lastly, a statistical differential splicing analysis was performed with `vast-tools diff` using Bayesian inference. Briefly , it calculates PSI posterior distributions using Bayes' theorem and employs replicates to estimate joint posterior distributions. The statistical significance between two posterior distributions is determined by comparing their differences using empirical distributions [@Han2017a] [@Weatheritt2016].
-
-
 
 The `vast-tools diff` module was run with options: `-n 10000` (lines to process in parallel), `-m 0.15` (min ∆PSI/100) `-e 10` (minimum reads), `-z 16` (random seed), and `--noPDF` (do not plot the estimates).
 
@@ -881,7 +879,7 @@ tidy_events |>
   as.matrix() -> tidy_full_mat
 
 set.seed(16)
-pheatmap(zMad(tidy_full_mat), cluster_rows = T, cluster_cols = T, 
+pheatmap(zScore(tidy_full_mat), cluster_rows = T, cluster_cols = T, 
          angle_col = 0, treeheight_col = 25, show_rownames = F, 
          main = paste0(nrow(tidy_full_mat), ' AS event with full coverage'),
          color = met.brewer("Benedictus", n = 100, type = 'continuous', direction = -1) )
@@ -1414,9 +1412,9 @@ processed_tbl_diff |>
 
 Check the number of DSE in each condition. In the next plot I define if an event is differentially spliced in TAF2, NLS-TAF2∆IDR or both. The `GROUP` column defines direction of the DSE relative to control for TAF2 and NLS-TAF2∆IDR, respecitvely, meaning that if an event is not DSE in that condition it is labelled as "NO"
 
-```{r, num_dse_diff_by_event_type}
+```{r, num_dse_diff_by_event_type, fig.width = 7, fig.height = 6}
 num_dse_diff |>
-  mutate(GROUP = gsub(pattern = '_', replacement = '\n', x = GROUP)) |> #View()
+  mutate(GROUP = gsub(pattern = '_', replacement = '\n', x = GROUP)) |> 
 ggplot() +
   facet_wrap(~signif_in, scales = 'free_x') +
   aes(x = GROUP, y = Num_DSE, fill = TYPE) +
