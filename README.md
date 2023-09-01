@@ -4,15 +4,20 @@ Write experiment info here...
 
 # Detailed analysis report 
 
-To view the html analysis report you need to open this link and modify it by adding a specific token at the end.
+To view the html analysis report in `R`:
 
-https://htmlpreview.github.io/?https://raw.githubusercontent.com/Ni-Ar/TAF2_OE_AS/main/TAF2OE_AS_analysis.html?token=<INSEERT TOKEN HERE>
+1. Go to [this page](https://github.com/Ni-Ar/TAF2_OE_AS/blob/main/TAF2OE_AS_analysis.html) 
+2. Click on 'Raw' on the right handside
+3. Copy the URL of this "raw" web-page
+4. In a new browser tab type `https://htmlpreview.github.io/?` and paste the URL you copied in step 4.
 
-The document token is a secuirty feature to keep the file private on GitHub. It changes often and at every new modification, so there's no efficient way to generate a permanent link while this repository is private. To find the token go to [the html file page in this repo](https://github.com/Ni-Ar/TAF2_OE_AS/blob/main/TAF2OE_AS_analysis.html) and click on the "Raw" button on the right. This opens a new web page where the link ends with `token=<TOKEN>`. Copy the token and paste it to the link above.
+Explanation: this repository is **private**, for security reason each file has a `token=<TOKEN>` long random word at the end of the URL, that changes from time to time, so it's not possible to create a permanent link for the html preview.
 
 # Citation
 
-Alternative splicing analysis tools citation are included in the quarto report.
+Alternative splicing analysis tools citation are included in the analysis report.
+
+
 
 This analysis is part of the Bhuiyan et al. paper.
 
