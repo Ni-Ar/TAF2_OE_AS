@@ -49,3 +49,26 @@ vast_tools/matt_*/*.aux
 vast_tools/matt_*/*.toc
 vast_tools/matt_*/*.sty
 vast_tools/matt_*/summary_graphics/*
+
+# matt files
+diff_spliced_IDs/[1-6]_*tab
+
+diff_spliced_IDs/EXONS_FEATURES/*.tex
+diff_spliced_IDs/EXONS_FEATURES/*.log
+diff_spliced_IDs/EXONS_FEATURES/*.out
+diff_spliced_IDs/EXONS_FEATURES/*.cls
+diff_spliced_IDs/EXONS_FEATURES/*.aux
+diff_spliced_IDs/EXONS_FEATURES/*.toc
+diff_spliced_IDs/EXONS_FEATURES/*.sty
+diff_spliced_IDs/EXONS_FEATURES/summary_graphics/*
+
+diff_spliced_IDs/INTRONS_FEATURES/*.tex
+diff_spliced_IDs/INTRONS_FEATURES/*.log
+diff_spliced_IDs/INTRONS_FEATURES/*.out
+diff_spliced_IDs/INTRONS_FEATURES/*.cls
+diff_spliced_IDs/INTRONS_FEATURES/*.aux
+diff_spliced_IDs/INTRONS_FEATURES/*.toc
+diff_spliced_IDs/INTRONS_FEATURES/*.sty
+diff_spliced_IDs/INTRONS_FEATURES/summary_graphics/*
+
+Matt_Analysis_first.md
