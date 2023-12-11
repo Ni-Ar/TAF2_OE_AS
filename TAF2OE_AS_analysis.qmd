@@ -94,7 +94,7 @@ dPSI_thrshld <- 10
 pval_thrshld <- 0.01
 ```
 
-Events with a *P*-value \<= `r pval_thrshld` and a \|∆PSI\| \>= `r dPSI_thrshld` were considered significant. The non parametric Mann-Whitney  (`rstatix::wilcox_test`) was also used to check if not assuming normality impacts the results drastically.
+Events with a *P*-value \<= `r pval_thrshld` and a \|∆PSI\| \>= `r dPSI_thrshld` were considered significant. The non parametric Mann-Whitney  (`rstatix::wilcox_test`) was also used to check if not assuming normality impacts the results drastically in a separate appendix.
 
 ## Bayesian inference method
 
@@ -295,6 +295,8 @@ zScore <- function(mat) {
 }
 ```
 
+Alternative formulat to z-score that used median
+
 ```{r, zmad formula}
 zMad <- function(mat) {
   row_medians <- apply(mat, 1, median)
@@ -341,6 +343,9 @@ diff_TAF2dIDR_path <- file.path(diff_dir, 'Fltrd_15_HeLa_NLSTAF2dIDR_minRead10_n
 
 plot_dir <- file.path(expr_dir, 'plots')
 if ( !dir.exists(plot_dir) ) { dir.create(path = plot_dir, recursive = T) }
+
+dse_IDs_dir <- file.path(expr_dir, 'diff_spliced_IDs')
+if ( !dir.exists(dse_IDs_dir) ) { dir.create(path = dse_IDs_dir, recursive = T) }
 ```
 
 # Differential splicing analysis
@@ -388,6 +393,7 @@ Add metadata info to the compared events table.
 cmpr_events <- cmpr_events |>
   left_join(y = mtdf, by = join_by(Sample)) 
 ```
+
 
 ### Events coverage QC
 
@@ -730,6 +736,44 @@ message('compare method found ', length(any_cmpr_both_oe_ids), ' DSEs in total')
 
 For now it looks like there are some changes in AS and most events are impacted by both OE.
 
+Separate between the exons and the introns that are up or down spliced in TAF2 OE
+
+```{r, get IDs of up and down exons cmpr method TAF2}
+cmpr_events_mrgd |>
+  subset(EVENT %in% mrgd_not_uniq_TAF2OE_ids) |>
+  select(GENE, EVENT, Sample, PSI, dPSI, comparison) |>
+  subset(comparison == 'TAF2') |>
+  arrange(desc(dPSI)) -> cmpr_TAF2
+
+up_cmpr_TAF2 <- subset(cmpr_TAF2, dPSI >= 0)
+do_cmpr_TAF2 <- subset(cmpr_TAF2, dPSI <= 0)
+
+EX_up_cmpr_TAF2 <- grep(pattern = "^HsaEX", x = up_cmpr_TAF2$EVENT, value = T)
+EX_do_cmpr_TAF2 <- grep(pattern = "^HsaEX", x = do_cmpr_TAF2$EVENT, value = T)
+
+IN_up_cmpr_TAF2 <- grep(pattern = "^HsaINT", x = up_cmpr_TAF2$EVENT, value = T)
+IN_do_cmpr_TAF2 <- grep(pattern = "^HsaINT", x = do_cmpr_TAF2$EVENT, value = T)
+```
+
+Separate between the exons and the introns that are up or down spliced in TAF2∆IDR OE
+
+```{r, get IDs of up and down exons cmpr method TAF2dIDR}
+cmpr_events_mrgd |>
+  subset(EVENT %in% mrgd_not_uniq_TAF2dIDR_ids) |>
+  select(GENE, EVENT, Sample, PSI, dPSI, comparison) |>
+  subset(comparison == 'TAF2dIDR') |>
+  arrange(desc(dPSI)) -> cmpr_TAF2dIDR
+
+up_cmpr_TAF2dIDR <- subset(cmpr_TAF2dIDR, dPSI >= 0)
+do_cmpr_TAF2dIDR <- subset(cmpr_TAF2dIDR, dPSI <= 0)
+
+EX_up_cmpr_TAF2dIDR <- grep(pattern = "^HsaEX", x = up_cmpr_TAF2dIDR$EVENT, value = T)
+EX_do_cmpr_TAF2dIDR <- grep(pattern = "^HsaEX", x = do_cmpr_TAF2dIDR$EVENT, value = T)
+
+IN_up_cmpr_TAF2dIDR <- grep(pattern = "^HsaINT", x = up_cmpr_TAF2dIDR$EVENT, value = T)
+IN_do_cmpr_TAF2dIDR <- grep(pattern = "^HsaINT", x = do_cmpr_TAF2dIDR$EVENT, value = T)
+```
+
 ## Frequentist inference method (from tidy)
 
 Start by importing the tidy dataset. Here "tidy" means a subset of all identified AS events that have generally a good score (i.e. coverage) and balanced read counts on both splice sites.
@@ -1020,7 +1064,7 @@ test_taf2_dat$PSI_Norm <- rnorm(n = length(test_taf2_dat$PSI),
 
 The first test I do is simply checking the real data and the theoretical normal distributions
 
-```{r, histrogram_PSI_binned}
+```{r, histrogram_PSI_binned, fig.width = 6, fig.height = 4}
 test_taf2_dat |>
   pivot_longer(cols = starts_with('PSI')) |>
   ggplot( aes(x = value, fill = name) ) +
@@ -1032,7 +1076,7 @@ test_taf2_dat |>
 
 The real data (in red) is inflated for zeros (full skipping) and 100 (full inclusion) which expected, however the PSI in the middle to resemble a normal distributio (in blue), in fact binning the data into 10 bins shows a more similar overlap
 
-```{r, histrogram_PSI_binned_distribution_and_normally_distributed_PSI}
+```{r, histrogram_PSI_binned_distribution_and_normally_distributed_PSI, fig.width = 6, fig.height = 4}
 test_taf2_dat |>
   pivot_longer(cols = starts_with('PSI')) |>
   ggplot( aes(x = value, fill = name) ) +
@@ -1043,7 +1087,7 @@ test_taf2_dat |>
 ```
 
 Lastly I do a quantile-quantile plot: 
-```{r, qq_plot}
+```{r, qq_plot, fig.width = 6, fig.height = 4}
 test_taf2_dat |>
   ggplot(aes(sample = PSI)) +
     stat_qq() + stat_qq_line() + coord_cartesian(ylim = c(-10, 110)) + theme_bw()
@@ -1055,7 +1099,7 @@ Now that I showed how the PSI is not a perfect normal distribution but it's clos
 tidy_dPSI_df |> 
   subset( OE != 'NLSTAF2dIDR') |>
   group_by(EVENT) |>
-  t_test(formula =  PSI ~ OE, ref.group = 'FRT', alternative = "two.sided", 
+  t_test(formula = PSI ~ OE, ref.group = 'FRT', alternative = "two.sided", 
          paired = F, p.adjust.method = 'none', conf.level = 0.95, detailed = F) |>
   adjust_pvalue(method = "BH") |> add_significance("p.adj") |>
   select(EVENT, p, p.adj, p.adj.signif) |>
@@ -1068,14 +1112,15 @@ Do the same *P*-values estimations with the *t*-test for NLS TAF2 ∆IDR OE
 tidy_dPSI_df |> 
   subset( OE != 'TAF2') |>
   group_by(EVENT) |>
-  t_test(formula =  PSI ~ OE, ref.group = 'FRT', alternative = "two.sided", 
+  t_test(formula = PSI ~ OE, ref.group = 'FRT', alternative = "two.sided", 
          paired = F, p.adjust.method = 'none', conf.level = 0.95, detailed = F) |>
   adjust_pvalue(method = "BH") |> add_significance("p.adj") |>
   select(EVENT, p, p.adj, p.adj.signif) |>
   setNames(c('EVENT', 'p_TAF2dIDR', 'padj_TAF2dIDR', 'padj_signif_TAF2dIDR')) -> pvals_TAF2dIDR
 ```
 
-Combine all dataframes into 1. If an event as a *P*-value that is NA, discard it.
+Combine all dataframes into one. If an event as a *P*-value that is `NA`, discard it.
+
 ```{r, combine stat pval df}
 tidy_dPSI_df |> 
   left_join(y = pvals_TAF2, by = join_by(EVENT)) |>
@@ -1085,7 +1130,8 @@ tidy_dPSI_df |>
 ```
 
 I also check the *P*-value distribution.
-```{r, check_pvalue_distribution}
+
+```{r, check_pvalue_distribution, fig.width = 6, fig.height = 4}
 tidy_dPSI_pval |>
   select(EVENT, p_TAF2, p_TAF2dIDR) |>
   pivot_longer(cols = starts_with("p")) |>
@@ -1171,15 +1217,38 @@ Select the differentially spliced events in TAF2 OE and plot only the exon skipp
 ```{r, select_stat_TAF2, message = TRUE, fig.height=5.8, fig.width=10}
 stat_TAF2 <- unique(subset(plot_TAF2, DSE_TAF2)$EVENT)
 message(length(stat_TAF2), ' significant events with low ∆PSI in TAF2 OE')
+```
 
-# select some events to plot
+```{r, get IDs of up and down exons tidy method TAF2}
+subset(tidy_dPSI_pval, OE == 'TAF2') |>
+  select(GENE, EVENT, dPSI_TAF2, p_TAF2, padj_TAF2, DSE_TAF2) |>
+  subset(DSE_TAF2) |>
+  unique() -> tidy_signif_TAF
+
+up_tidy_TAF2 <- subset(tidy_signif_TAF, dPSI_TAF2 >= 0)
+do_tidy_TAF2 <- subset(tidy_signif_TAF, dPSI_TAF2 < 0)
+
+EX_up_tidy_TAF2 <- grep(pattern = "^HsaEX", x = up_tidy_TAF2$EVENT, value = T)
+EX_do_tidy_TAF2 <- grep(pattern = "^HsaEX", x = do_tidy_TAF2$EVENT, value = T)
+
+IN_up_tidy_TAF2 <- grep(pattern = "^HsaINT", x = up_tidy_TAF2$EVENT, value = T)
+IN_do_tidy_TAF2 <- grep(pattern = "^HsaINT", x = do_tidy_TAF2$EVENT, value = T)
+```
+
+Select some events to plot
+
+```{r, stat_TAF2_get_psi}
 set.seed(16)
 subset_stat_TAF2 <- grep(pattern = 'HsaEX', x = stat_TAF2, value = T)
 subset_stat_TAF2 <- c('HsaEX0065488', sample(stat_TAF2[stat_TAF2 != "HsaEX0065488"], size = 8) )
 
 grep_psi(inclusion_tbl = psi_path, vst_id = subset_stat_TAF2 ) |>
   tidy_vst_psi() -> psi_stat_TAF2
+```
 
+Plot PSI values.
+
+```{r, fig.width = 11, fig.height = 5}
 psi_stat_TAF2 |> 
   left_join(y = mtdf, by = join_by(Sample)) |>
   plot_PSI_boxplot(order_by_dPSI = F, num_col = 5)
@@ -1237,19 +1306,42 @@ Select the differentially spliced events in TAF2 ∆IDR OE and plot some of the 
 
 ```{r, select_stat_TAF2dIDR, message = TRUE, fig.height = 5.5, fig.width = 9}
 stat_TAF2dIDR <- unique(subset(plot_TAF2dIDR, DSE_TAF2dIDR)$EVENT)
-
 message(length(stat_TAF2dIDR), ' significant events with low ∆PSI in TAF2 ∆IDR OE')
+```
 
-# select some events to plot
+```{r, get IDs of up and down exons tidy method TAF2dIDR}
+subset(tidy_dPSI_pval, OE == 'NLSTAF2dIDR') |>
+  select(GENE, EVENT, dPSI_TAF2dIDR, p_TAF2dIDR, padj_TAF2dIDR, DSE_TAF2dIDR) |>
+  subset(DSE_TAF2dIDR) |>
+  unique() -> tidy_signif_TAFdIDR
+
+up_tidy_TAF2dIDR <- subset(tidy_signif_TAFdIDR, dPSI_TAF2dIDR >= 0)
+do_tidy_TAF2dIDR <- subset(tidy_signif_TAFdIDR, dPSI_TAF2dIDR < 0)
+
+EX_up_tidy_TAF2dIDR <- grep(pattern = "^HsaEX", x = up_tidy_TAF2dIDR$EVENT, value = T)
+EX_do_tidy_TAF2dIDR <- grep(pattern = "^HsaEX", x = do_tidy_TAF2dIDR$EVENT, value = T)
+
+IN_up_tidy_TAF2dIDR <- grep(pattern = "^HsaINT", x = up_tidy_TAF2dIDR$EVENT, value = T)
+IN_do_tidy_TAF2dIDR <- grep(pattern = "^HsaINT", x = do_tidy_TAF2dIDR$EVENT, value = T)
+```
+
+Select some events to plot
+
+```{r}
 set.seed(16)
 # subset_stat_TAF2dIDR <- grep(pattern = '^HsaEX', x = stat_TAF2dIDR, value = T)
 if( length(stat_TAF2dIDR) >= 9 ){
   subset_stat_TAF2dIDR <- sample(stat_TAF2dIDR, size = 9)
 }
+```
 
+Get events
+```{r, stat_TAF2dIDR_get_psi}
 grep_psi(inclusion_tbl = psi_path, vst_id = subset_stat_TAF2dIDR ) |>
   tidy_vst_psi() -> psi_stat_TAF2dIDR
+```
 
+```{r, fig.width = 11, fig.height = 5}
 psi_stat_TAF2dIDR |> 
   left_join(y = mtdf, by = join_by(Sample) ) |>
   plot_PSI_boxplot(order_by_dPSI = F, num_col = 5)
@@ -1259,7 +1351,7 @@ The exon skipping event [HsaEX0029450](https://vastdb.crg.eu/event/HsaEX0029450@
 
 The event [HsaEX0050973](https://vastdb.crg.eu/event/HsaEX0050973@hg38) was characterised before in HeLa cells, where the [inclusion isoform leads to multi-nucleated cells when over-expressed](https://www.ncbi.nlm.nih.gov/pubmed/12529439). This case was also found with the `compare` method.
 
-```{r, show example not found in compare2}
+```{r, show example found in compare2}
 "HsaEX0050973" %in% specific_bona_fide_TAF2dIDR_ids
 ```
 
@@ -1275,7 +1367,6 @@ message('tidy method added ', length(stat_both_oe_ids), ' DSEs, of which ',
 ### Appendix with wilcoxon test
 
 For statistical fairness repeat the analysis and check overlap with t-test.
-
 
 ## Bayesian method (from diff)
 
@@ -1319,9 +1410,9 @@ Interestingly not many events are common between the 2 OE.
 
 Plot the actual ∆PSI of the events that were filtered to have a minimum value of \|∆PSI\| \>=15 with a 95% confidence.
 
-```{r, diff_TAF2_hist, fig.width = 6, fig.height = 3}
+```{r, diff_TAF2_hist, fig.width = 6, fig.height = 2}
 plot_hist_dPSI(diff_TAF2) +
-  geom_vline(xintercept = -15) +   geom_vline(xintercept = 15) +
+  geom_vline(xintercept = -15) + geom_vline(xintercept = 15) +
   labs(title = 'TAF2')
 
 ggsave(filename = '14_diff_dPSI_TAF2_Histogram.pdf', plot = last_plot(), 
@@ -1331,7 +1422,7 @@ ggsave(filename = '14_diff_dPSI_TAF2_Histogram.pdf', plot = last_plot(),
 
 There seem to be a good balance between up and down regulated events.
 
-```{r, diff_TAF2_dIDR_hist, fig.width = 6, fig.height = 3}
+```{r, diff_TAF2_dIDR_hist, fig.width = 6, fig.height = 2}
 plot_hist_dPSI(diff_TAF2dIDR) +
   geom_vline(xintercept = -15) +   geom_vline(xintercept = 15) +
   labs(title = 'NLS-TAF2∆IDR')
@@ -1406,11 +1497,13 @@ left_join(x = diff_psi_df, y = diff_TAF2, by = join_by(GENE, EVENT) ) |>
 
 # count number of events
 processed_tbl_diff |>
- group_by(GROUP, TYPE, signif_in)  |>
- summarise(Num_DSE = n(), .groups = 'keep') -> num_dse_diff
+  select(GENE, EVENT, GROUP, TYPE, signif_in) |>
+  unique() |>
+  group_by(GROUP, TYPE, signif_in) |>
+  summarise(Num_DSE = n(), .groups = 'keep') -> num_dse_diff
 ```
 
-Check the number of DSE in each condition. In the next plot I define if an event is differentially spliced in TAF2, NLS-TAF2∆IDR or both. The `GROUP` column defines direction of the DSE relative to control for TAF2 and NLS-TAF2∆IDR, respecitvely, meaning that if an event is not DSE in that condition it is labelled as "NO"
+Check the number of DSE in each condition. In the next plot I define if an event is differentially spliced in TAF2, NLS-TAF2∆IDR or both. The `GROUP` column defines direction of the DSE relative to control for TAF2 and NLS-TAF2∆IDR, respectively, meaning that if an event is not DSE in that condition it is labelled as "NO"
 
 ```{r, num_dse_diff_by_event_type, fig.width = 7, fig.height = 6}
 num_dse_diff |>
@@ -1419,7 +1512,7 @@ ggplot() +
   facet_wrap(~signif_in, scales = 'free_x') +
   aes(x = GROUP, y = Num_DSE, fill = TYPE) +
   geom_bar(stat = 'identity', colour = 'black', linewidth = 0.2, width = 0.75) + 
-  geom_text(aes(label = Num_DSE, group = TYPE), size = 2,
+  geom_text(aes(label = Num_DSE, group = TYPE), size = 3,
             position = position_stack(vjust = 0.5) ) +
   scale_fill_discrete(name = 'dse type') +
   # scale_x_discrete(guide = guide_axis(n.dodge = 2))+
@@ -1446,11 +1539,112 @@ ggsave(filename = '16_diff_Num_DSE_Direction_Bar.pdf', plot = last_plot(),
 
 Now that the DSEs have been identified by each method it's time to check how many events overlap and how many were quantified.
 
+Separate between the exons and the introns that are up or down spliced in TAF2 OE
+
+```{r, get IDs of up and down exons diff method TAF2}
+up_diff_TAF2 <- subset(diff_TAF2, dPSI_TAF2 >= 0)
+do_diff_TAF2 <- subset(diff_TAF2, dPSI_TAF2 < 0)
+
+EX_up_diff_TAF2 <- grep(pattern = "^HsaEX", x = up_diff_TAF2$EVENT, value = T)
+EX_do_diff_TAF2 <- grep(pattern = "^HsaEX", x = do_diff_TAF2$EVENT, value = T)
+
+IN_up_diff_TAF2 <- grep(pattern = "^HsaINT", x = up_diff_TAF2$EVENT, value = T)
+IN_do_diff_TAF2 <- grep(pattern = "^HsaINT", x = do_diff_TAF2$EVENT, value = T)
+```
+
+Separate between the exons and the introns that are up or down spliced in TAF2∆IDR OE
+
+```{r, get IDs of up and down exons diff method TAF2dIDR}
+up_diff_TAF2dIDR <- subset(diff_TAF2dIDR, dPSI_TAF2dIDR >= 0)
+do_diff_TAF2dIDR <- subset(diff_TAF2dIDR, dPSI_TAF2dIDR < 0)
+
+EX_up_diff_TAF2dIDR <- grep(pattern = "^HsaEX", x = up_diff_TAF2dIDR$EVENT, value = T)
+EX_do_diff_TAF2dIDR <- grep(pattern = "^HsaEX", x = do_diff_TAF2dIDR$EVENT, value = T)
+
+IN_up_diff_TAF2dIDR <- grep(pattern = "^HsaINT", x = up_diff_TAF2dIDR$EVENT, value = T)
+IN_do_diff_TAF2dIDR <- grep(pattern = "^HsaINT", x = do_diff_TAF2dIDR$EVENT, value = T)
+```
+
 ## DSE overlap
 
 ::: callout-note
 Plots should be improved.
 :::
+
+### Exons
+
+```{r, make list exons}
+EX_up_TAF2 <- unique(c(EX_up_cmpr_TAF2, EX_up_tidy_TAF2, EX_up_diff_TAF2))
+EX_do_TAF2 <- unique(c(EX_do_cmpr_TAF2, EX_do_tidy_TAF2, EX_do_diff_TAF2))
+
+EX_up_TAF2dIDR <- unique(c(EX_up_cmpr_TAF2dIDR, EX_up_tidy_TAF2dIDR, EX_up_diff_TAF2dIDR))
+EX_do_TAF2dIDR <- unique(c(EX_do_cmpr_TAF2dIDR, EX_do_tidy_TAF2dIDR, EX_do_diff_TAF2dIDR))
+
+dsexons_list <- list(EX_up_TAF2, EX_up_TAF2dIDR, EX_do_TAF2, EX_do_TAF2dIDR)
+ 
+names(dsexons_list) <- c('EX UP TAF2', 'EX UP ∆IDR', 'EX DOWN TAF2', 'EX DOWN ∆IDR')
+```
+
+```{r, make upset plot all ex int events }
+intersection_exons_ids <- upset(fromList(dsexons_list), text.scale = 1.5, 
+                                nintersects = 6, 
+                                mb.ratio = c(0.7, 0.3),
+                                point.size = 5, order.by = 'freq', keep.order = T,
+                                sets = rev(names(dsexons_list)),
+                                main.bar.color = "gray16") 
+```
+
+Show the number and overlap of events found by each method with an upset plot:
+
+```{r, show_upset_plot_all_ex, fig.width = 4.1, fig.height = 4}
+intersection_exons_ids
+```
+
+```{r, save upset plot exons interactions, message = FALSE, warning = FALSE}
+cairo_pdf(file = file.path(plot_dir, '17_overlap_diff_exons_Upset.pdf'), 
+          width = 4.1, height = 4, bg = NA)
+intersection_exons_ids
+dev.off()
+```
+
+### Introns
+
+```{r, make list introns}
+IN_up_TAF2 <- unique(c(IN_up_cmpr_TAF2, IN_up_tidy_TAF2, IN_up_diff_TAF2))
+IN_do_TAF2 <- unique(c(IN_do_cmpr_TAF2, IN_do_tidy_TAF2, IN_do_diff_TAF2))
+
+IN_up_TAF2dIDR <- unique(c(IN_up_cmpr_TAF2dIDR, IN_up_tidy_TAF2dIDR, IN_up_diff_TAF2dIDR))
+IN_do_TAF2dIDR <- unique(c(IN_do_cmpr_TAF2dIDR, IN_do_tidy_TAF2dIDR, IN_do_diff_TAF2dIDR))
+ 
+dsintrons_list <- list(IN_up_TAF2, IN_up_TAF2dIDR, IN_do_TAF2, IN_do_TAF2dIDR)
+ names(dsintrons_list) <- c('INT UP TAF2', 'INT UP ∆IDR', 'INT DOWN TAF2', 'INT DOWN ∆IDR')
+```
+
+Make upset plot introns
+```{r, make upset plot all intron int events}
+intersection_introns_ids <- upset(fromList(dsintrons_list), text.scale = 1.5, nintersects = NA, 
+                                  mb.ratio = c(0.7, 0.3), 
+                                  point.size = 5, order.by = 'freq', keep.order = T,
+                                  sets = rev(names(dsintrons_list)),
+                                  main.bar.color = "gray16") 
+```
+
+Show the number and overlap of events found by each method with an upset plot:
+
+```{r, show_upset_plot_all3, fig.width = 4.1, fig.height = 4}
+intersection_introns_ids
+```
+
+```{r, save upset plot introns interactions, message = FALSE, warning = FALSE}
+cairo_pdf(file = file.path(plot_dir, '18_overlap_diff_introns_Upset.pdf'), 
+          width = 4.1, height = 4, bg = NA)
+intersection_introns_ids
+dev.off()
+```
+
+## By method
+
+Plot how many Differentially Spliced Events by method? This code doesn't separate between exons or introns and between up or down-regulated events. 
 
 Check the number of DSE found by each method.
 
@@ -1503,54 +1697,90 @@ intersection_methods_ids_mrgd
 ```
 
 
-Plot how many Differentially Spliced Events by method?
-
-```{r, DSE_plot_count, fig.width = 3, fig.height = 5, echo = F, eval = F}
-# OLD CODE
-ggplot(num_DSE) +
-  aes(x = method, y = num, fill = method) +
-  geom_col( colour = 'black', show.legend = F, linewidth = 0.2 ) +
-  geom_text(aes(label = num), nudge_y = 7, size = 2 ) +
-  labs(y = 'Num of DSE') +
-  scale_y_continuous(expand = expansion(mult = c(0.001, 0.03), add = 0), 
-                     n.breaks = 8 )+
-  theme_classic(base_family = 'Arial', base_size = 6) +
-  theme(panel.background = element_blank(),
-        panel.grid.major.y = element_line(linewidth = 0.2, colour = 'gray84'),
-        axis.line = element_line(linewidth = 0.2),
-        axis.text = element_text(colour = 'black'),
-        axis.ticks.x = element_blank(),
-        axis.title.x = element_blank())
-
-ggsave(filename = '99_Num_DSE_Bar.pdf', plot = last_plot(), 
-       device = cairo_pdf, path = expr_dir, units = 'cm', width = 4,
-       height = 7)
-
-```
-
-```{r, DSE_plot_count_stacked, fig.width = 5, fig.height = 1, echo = F, eval = F}
-# OLD CODE
-ggplot(num_DSE, aes(fill = method, x = num, y = 'method')) + 
-    geom_bar(position = "stack", stat = "identity", colour = 'black', show.legend = T, linewidth = 0.2 ) +
-    labs(x = 'Num of DSE') +
-    scale_x_continuous(expand = expansion(mult = c(0.001, 0.03), add = 0), 
-                       n.breaks = 8 )+
-    theme_classic(base_family = 'Arial', base_size = 6) +
-    theme(panel.background = element_blank(),
-          panel.grid.major.x = element_line(linewidth = 0.2, colour = 'gray84'),
-          legend.key.size = unit(2, units = 'mm'),
-          axis.line = element_line(linewidth = 0.2),
-          axis.text = element_text(colour = 'black'),
-          axis.ticks.y = element_blank(),
-          axis.title.y = element_blank(),
-          axis.text.y = element_blank())
-```
-
-## Export DSE and data
+# Export DSE and data
 
 ::: callout-note
-The part in this report can be improved
+Export the significant events
 :::
+
+### Exons
+
+Recreate Upset plot sets.
+
+```{r}
+EX_up_common <- EX_up_TAF2[(EX_up_TAF2 %in% EX_up_TAF2dIDR)] 
+EX_do_common <- EX_do_TAF2[(EX_do_TAF2 %in% EX_do_TAF2dIDR)] 
+
+EX_up_uniqTAF2 <- EX_up_TAF2[!(EX_up_TAF2 %in% c(EX_up_common, EX_up_TAF2dIDR))]
+EX_do_uniqTAF2 <- EX_do_TAF2[!(EX_do_TAF2 %in% c(EX_do_common, EX_do_TAF2dIDR, EX_up_TAF2, EX_up_TAF2dIDR))] 
+
+EX_up_uniqTAF2dIDR <- EX_up_TAF2dIDR[!(EX_up_TAF2dIDR %in% c(EX_up_common, EX_up_TAF2, EX_do_TAF2, EX_do_TAF2dIDR))]
+EX_do_uniqTAF2dIDR <- EX_do_TAF2dIDR[!(EX_do_TAF2dIDR %in% c(EX_do_common, EX_up_TAF2, EX_up_common))] 
+```
+
+Export to file the differentially spliced exons IDs
+
+```{r}
+write_delim(x = as.data.frame(EX_up_common), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '1_UP_EXONS_BOTH.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(EX_do_common), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '2_DOWN_EXONS_BOTH.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(EX_up_uniqTAF2), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '3_UP_EXONS_TAF2.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(EX_do_uniqTAF2), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '4_DOWN_EXONS_TAF2.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(EX_up_uniqTAF2dIDR), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '5_UP_EXONS_TAF2dIDR.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(EX_do_uniqTAF2dIDR), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '6_DOWN_EXONS_TAF2dIDR.tab'), delim = '\t')
+```
+
+### Introns
+
+Recreate Upset plot sets.
+
+```{r}
+IN_up_common <- IN_up_TAF2[(IN_up_TAF2 %in% IN_up_TAF2dIDR)] 
+IN_do_common <- IN_do_TAF2[(IN_do_TAF2 %in% IN_do_TAF2dIDR)] 
+
+IN_up_uniqTAF2 <- IN_up_TAF2[!(IN_up_TAF2 %in% c(IN_up_common, IN_up_TAF2dIDR))]
+IN_do_uniqTAF2 <- IN_do_TAF2[!(IN_do_TAF2 %in% c(IN_do_common, IN_do_TAF2dIDR, IN_up_TAF2, IN_up_TAF2dIDR))] 
+
+IN_up_uniqTAF2dIDR <- IN_up_TAF2dIDR[!(IN_up_TAF2dIDR %in% c(IN_up_common, IN_up_TAF2, IN_do_TAF2, IN_do_TAF2dIDR))]
+IN_do_uniqTAF2dIDR <- IN_do_TAF2dIDR[!(IN_do_TAF2dIDR %in% c(IN_do_common, IN_up_TAF2, IN_up_common))] 
+```
+
+Export to file the differentially spliced introns IDs
+
+```{r}
+write_delim(x = as.data.frame(IN_up_common), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '1_UP_INTRONS_BOTH.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(IN_do_common), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '2_DOWN_INTRONS_BOTH.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(IN_up_uniqTAF2), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '3_UP_INTRONS_TAF2.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(IN_do_uniqTAF2), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '4_DOWN_INTRONS_TAF2.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(IN_up_uniqTAF2dIDR), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '5_UP_INTRONS_TAF2dIDR.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(IN_do_uniqTAF2dIDR), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '6_DOWN_INTRONS_TAF2dIDR.tab'), delim = '\t')
+```
+
+# END OF ANALYSIS?
+
+
+## OLD CODE
 
 Prepare exons for stratifying.
 
