@@ -1,0 +1,640 @@
+---
+title: "SRRM2 KD AS analysis"
+author: "Niccolò Arecco"
+toc: true
+number-sections: true
+highlight-style: pygments
+format:
+  html:
+    embed-resources: true
+    code-fold: true
+    code-copy: true
+    theme:
+      light: flatly
+      dark: darkly
+editor: source
+bibliography: AS_references.bib
+---
+
+
+# Intro
+
+Alternative splicing (AS) events included in this analysis:
+
+1.  alternatively spliced exons and microexons
+
+2.  alternative splice sites (acceptor at 3' and donor at 5')
+
+3.  intron retentions
+
+For each sample AS events were quantified using the percentage of sequence inclusion (PSI) metric, which is a number ranging from zero to 100, corresponding to full sequence skipping or full sequence inclusion in all transcripts of a gene, respectively. For example, constitutively spliced exons have a PSI of 100. The PSI cannot be calculated for the very first and last exons of a gene.
+
+These documents reports the RNA-seq downstream AS analysis after processing the samples with VAST-TOOLS[@Tapial2017] for SRRM2 Knockdown (KD) in HeLa[@Zhang2024] and HepG2[@Cui2023] cells.
+
+## Quarto
+
+This document is generated using Quarto which enables to weave together content and executable code into a finished document. This is an improved version of what used to be called 'Rmarkdown'. The document hides all code chunks, but they can be opened up with the drop down arrow. On the top right corner there's a toggle for dark-mode. To learn more about Quarto see [here](https://quarto.org).
+
+# FASTQ files processing
+
+`vast-tools`[@Tapial2017] was used to quantify both AS events PSI and gene expression as normalised TPMs using `limma::normalizeBetweenArrays` and cRPKMs per gene. The analysis was performed using `vast-tool` v2.5.1.
+
+The raw FASTQ files were processed as following:
+
+## align
+
+`vast-tools` maps the RNA-seq reads to a predefined set of exon-exon junctions (EEJ). This set of EEJ is an "*enriched*" version of all ENSEMBL transcripts. This dataset was analysed using Homo sapiens assembly hg38, based on ENSEMBL v88. To do so `vast-tools align` first trims the reads to 50 nucleotides fragments with a sliding window define by `--stepSize` (usually 25 or 20 nt). The trimmed reads are aligned to the EEJ libraries using `bowtie v1.2`. The trimmed reads must have at least 8 nucleotides overlapping the splice site and be uniquely mapping to be considered for quantification.
+
+For this analysis fastq files were processed with `vast-tools align` with options `--sp hg38`, `---IR_version 2`, `--stepSize 20`, and `--expr`. Reads strand detection is done automatically.
+
+## merge
+
+To increase sequencing read depth the `vast-tools` has a module called `merge` that pools the individual replicates of each condition into a super sample. This is basically equivalent to concatenating FASTQ files with `cat` before running `align`. This helps prevent biases in AS events identification towards highly expressed genes. For this analysis the 3 individual replicates per condition were merged.
+
+## combine
+
+To build the main output containing all detected AS events the `vast-tools combine` module takes intermediate output files and generate a table named as `INCLUSION_LEVELS_FULL-<SPECIES_ASSEMBLY>-<SAMPLES_NUM>-v251.tab`. This file contains an AS event on each row, the first 6 columns contain basic information about the event (e.g. gene name, length, and coordinates) followed by a column with the PSI and a quality score column for each sample. Further details about the comma separated quality scores can be found [here](https://github.com/vastgroup/vast-tools#combine-output-format). This step also generates a similar table gene expression counts expressed as cRPKM or TPM.
+
+All individual replicates and the merged super samples were combined with `vast-tools combine` with options `--add_version`, `--TPM` and `--norm` for gene expression. For this analysis the output file has 721551 AS events. 
+
+## compare
+
+To calculate the differential inclusion level (∆PSI) between samples the combined table was processed with `vast-tools compare` using the HeLa FRT samples as control (`-a`) and the following filtering parameters: `--min_dPSI 15`, `--min_range 0`, `--max_dPSI 5`, `--print_sets`, `--noB3`, `--p_IR`, `--print_dPSI`, and `--GO`. HeLa TAF2 OE and NLS-TAF2 ∆IDR OE were each compared to the control separately. The comparison was done using the 3 individual replicates per condition or by using only the merged super sample. This is denoted in the file names as `_uniq_` or `_mrgd_`.
+
+## tidy
+
+To simplify and filter the full inclusion table the module `vast-tools tidy` produces a table with only events that have a minimum coverage that are more likely to relevant for downstream analysis.
+
+Full inclusion table was filtered using `vast-tools tidy` with: `--noB3`, `--p_IR`, `--add_names`, and `--log`. The `tidy` module has an option to discard the VLOW events (see below). Here since there are replicates the VLOW events are include in the analysis.
+
+## diff
+
+Lastly, a statistical differential splicing analysis was performed with `vast-tools diff` using Bayesian inference. Briefly , it calculates PSI posterior distributions using Bayes' theorem and employs replicates to estimate joint posterior distributions. The statistical significance between two posterior distributions is determined by comparing their differences using empirical distributions [@Han2017a] [@Weatheritt2016].
+
+The `vast-tools diff` module was run with options: `-n 10000` (lines to process in parallel), `-m 0.15` (min ∆PSI/100) `-e 10` (minimum reads), `-z 16` (random seed), and `--noPDF` (do not plot the estimates).
+
+# Selecting differentially spliced events
+
+I use 3 different methods to select differentially spliced events (DSEs).
+
+## Effect size method
+
+The `compare` module pre-filters the events based on read coverage imbalance and other features. The events are then simply filtered by calculating average and individual ∆PSIs. Between control and test samples the PSI distribution must be non overlapping, i.e. at least 10 PSI difference between the maximum and minimum PSI of the 2 groups (`--min_range 10`).
+
+::: callout-note
+`compare` is a non-statistical approach
+:::
+
+Differentially spliced events have a minimum \|∆PSI\| \>= 15. This might have the caveat of missing AS events in lowly expressed genes.
+
+## Frequentist inference method
+
+Using the inclusion table generated by the `tidy` module, the events were further filtered to have coverage in at least 2 samples per condition and statistical difference between the average PSI in each condition was calculate using the Student's *t*-test followed by multiple hypothesis testing (BH) correction using `rstatix::t_test` in `R`.
+
+```{r, set thresholds for frequentist inferance method, echo = F}
+dPSI_thrshld <- 10
+pval_thrshld <- 0.01
+```
+
+Events with a *P*-value \<= `r pval_thrshld` and a \|∆PSI\| \>= `r dPSI_thrshld` were considered significant. The non parametric Mann-Whitney  (`rstatix::wilcox_test`) was also used to check if not assuming normality impacts the results drastically in a separate appendix.
+
+## Bayesian inference method
+
+The module `diff` uses:
+
+1.  A uniform prior distribution Beta(α = 1, β = 1).
+
+2.  A binomial likelihood function for the number of inclusion reads K \~ Binomial(Ψ, N).
+
+where Ψ represents PSI for any AS event and N is the total number of junction reads per event. The formula K \~ Binomial(Ψ, N) means that the number of inclusion reads (K) is assumed to follow a binomial distribution with Ψ as the probability of inclusion (i.e., success) and N as the total number of junction reads per splicing event.
+
+This prior distribution represents our initial beliefs about the PSI before observing any data, while the likelihood function represents the probability of observing the data given a specific PSI value. The likelihood function follows a binomial distribution, which is appropriate for count data like the number of inclusion reads.
+
+According to Bayes' theorem, our prior beliefs about PSI are updated based on observed data to obtain the posterior distribution. In this case, the prior distribution (uniform Beta) and the likelihood function (binomial) are "*conjugate*" to each other, which means that the posterior distribution can be expressed in a closed form using the same type of distribution as the prior. Therefore the posterior distribution over Ψ, is represented as a Beta distribution with parameters Ψ ≈ Beta(K + α, (N -- K) + β).
+
+If replicates are available, joint posterior distributions for a sample are estimated from sampling empirical posterior distributions of the replicates and fitting a new posterior Beta with maximum likelihood estimation (MLE) using the `MASS::fitdist` function in `R`. This basically means combining the information from multiple replicates to get a more robust estimate of the PSI. The statistical significance between two biological conditions, defined as the level of confidence in determining whether two posterior PSI distributions are significantly different from each other, modelled as two posterior distributions X\~ Beta, and Y \~ Beta, is calculated as P(X -- Y \> 0), i.e., X is higher than Y. This probability can be estimated from the difference of empirical distributions sampled between X and Y such that P(X -- Y \> 0) =$\sum_{i=1}^{n} (Xi –Yi > 0) / N$. Lastly, significantly differential events were additionally required to have a PSI difference \> 10.
+
+Using the `diff` module of vast-tools filter for events with a Minimum Value (MV) of \|∆PSI\| at 95% confidence \>= 15%. This means that each event as a 95% probability to have a \|∆PSI\| between the 2 conditions higher or equal to 15% (MV).
+
+# Set up
+
+## Packages
+
+Load common packages that have to be pre-installed. Check @sec-sessioninfo for package versions.
+
+```{r, load common packages, message = FALSE, warning = FALSE}
+library(ggplot2)
+library(ggrepel)
+library(ggforce)
+library(pheatmap)
+library(UpSetR)
+library(viridis)
+library(rstatix)
+library(Cairo)
+library(patchwork)
+library(crayon)
+```
+
+In addition I developed an `R` package called `niar` to stream line some of the common analysis steps. It can be installed from [my GitHub repository](https://github.com/Ni-Ar/niar) using:
+
+```{r, install niar package, eval = FALSE, message = FALSE, warning = FALSE}
+devtools::install_github("Ni-Ar/niar")
+library(niar)
+```
+
+Here I load the package from my local repository with:
+
+```{r, load niar package, message = FALSE, warning = FALSE}
+devtools::load_all(path = '~/mnt/narecco/software/R/niar')
+```
+
+## Functions
+
+*Colour palettes*:
+
+Events coverage quality score colour palette.
+```{r}
+quality_score_colors <- c('#ffffcc', '#c2e699', '#78c679', '#31a354', '#006837')
+quality_score_values <- c("N", "VLOW", "LOW", "OK", "SOK")
+names(quality_score_colors) <- quality_score_values
+```
+
+Tanja's conditions colour palette
+```{r}
+sample_palette <- c('#009900',  '#663399', '#FFCC33')
+names(sample_palette) <- c('TAF2', 'TAF2∆IDR', 'NLS-TAF2∆IDR')
+```
+
+*Some generic functions I wrote for this analysis*:
+
+A plotting function to explore sample's ∆PSI of exons and introns
+```{r, function for grouped dPSI histogram}
+#' Group differentially spliced exons and introns
+#'
+#' @param data A data frame with the columns `dPSI`, `COMPLEX`, `comparison`
+#'
+#' @return A ggplot
+plot_dPSI_hist_grpd <- function(data, xlim = c(-60, 60) ) {
+  
+
+  exon_type <- c("S", "C1", "C2", "C3", "ANN", "MIC")
+  intron_type <- c("IR")
+  alt_ss <- c("Alt3", "Alt5")
+  
+  data |>
+    select(dPSI, COMPLEX, comparison) |>
+    mutate(TYPE = case_when(COMPLEX %in% exon_type ~ 'Exon',
+                            COMPLEX %in% intron_type ~ 'Intron',
+                            COMPLEX %in% alt_ss ~ 'alt. splice site',
+                            ) ) |>
+    subset( !COMPLEX %in% c('Alt3', 'Alt5') ) |>
+    unique() |>
+    ggplot() +
+      aes(x = dPSI, fill = dPSI > 0 ) +
+      facet_grid(TYPE ~ comparison, scales = 'free_x',
+                 labeller = labeller(comparison = c(TAF2dIDR = 'NLS-TAF2 ∆IDR',
+                                                    TAF2 = 'TAF2') ) ) +
+      geom_histogram(binwidth = 1, show.legend = F) +
+      scale_x_continuous(n.breaks = 10) +
+      scale_y_continuous(n.breaks = 4, expand = expansion(mult = c(0, 0.01))) +
+      scale_fill_manual(values = c("TRUE" = "firebrick3", "FALSE" = "dodgerblue3")) +
+      labs(x = "\u0394PSI (KD - Cntrl)", y = "Num. of events") +
+      coord_cartesian(xlim = xlim) +
+      theme_classic(base_family = 'Arial', base_size = 6) +
+      theme(legend.position = 'none', 
+            plot.background = element_blank(),
+            panel.background = element_blank(), 
+            panel.grid.major = element_line(colour = 'gray84', linewidth = 0.1),
+            panel.grid.minor.y = element_blank(),
+            panel.border = element_blank(),
+            axis.text = element_text(colour = 'black'), 
+            strip.background = element_blank() ) -> cmpr_dPSI_Hist
+  return(cmpr_dPSI_Hist)
+}
+```
+
+QC plot with the number of events within each quality score
+```{r, function to plot event quality score }
+#' Show the number of events by quality score in a stacked bar plot
+#'
+#' @param data A dataframe with the complex `COMPLE` and `Quality_Score_Value`
+#'
+#' @return A ggplot
+plot_quality_score_stacked <- function(data) {
+  ggplot(data) +
+    aes(x = COMPLEX, fill = Quality_Score_Value) +
+    geom_bar(colour = 'black', linewidth = 0.2) +
+    scale_fill_manual(values = quality_score_colors, name = "Score") +
+    scale_y_continuous(expand = expansion(mult = 0, add = 1), n.breaks = 10) +
+    labs(x = 'Type of AS event', y = 'Number of AS event') +
+    theme_classic(base_family = 'Arial', base_size = 6) +
+    theme(legend.position = 'inside',
+          legend.position.inside = c(0.45, 0.95),
+          legend.key.size = unit(2, units = 'mm'), 
+          legend.direction = 'horizontal',
+          plot.background = element_blank(),
+          panel.background = element_blank(), 
+          panel.grid.major.y = element_line(linewidth = 0.2, colour = 'grey84'),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.y = element_blank(),
+          panel.border = element_blank(),
+          axis.text = element_text(colour = 'black'),
+          axis.ticks = element_line(linewidth = 0.2),
+          axis.ticks.x = element_blank(),
+          axis.line = element_line(linewidth = 0.2)) -> cmpr_Scores_Bars
+  return(cmpr_Scores_Bars)
+}
+```
+
+Wrapper to explore the PSI and quality scores of specific events.
+```{r, generic PSI plotting function}
+plot_PSI_boxplot <- function(df, num_col = 5, order_by_dPSI = T) {
+
+  if (order_by_dPSI) {
+    df <- df |>
+    mutate(EVENT = fct_reorder(EVENT, dPSI)) 
+  
+    gene_order <- unique( df[order(df$EVENT, decreasing = T), ]$GENE)
+    
+    df <- df |>
+      mutate(GENE = factor(GENE, levels = gene_order))
+  }
+  
+  ggplot(df) +
+    aes(x = OE, y = PSI) +
+    facet_wrap( ~ GENE + EVENT, scales = "free_x", ncol = num_col) +
+    geom_boxplot(fill = NA, outlier.shape = NA, lwd = 0.2) +
+    geom_point(aes(fill = Quality_Score_Value, shape = Replicate),
+               size = 1.5, stroke = 0.2, 
+               position = position_dodge(width = 0.5)) +
+    scale_shape_manual(values = c('Merge' = 22, 'A' = 21, 'B' = 21, 'C' = 21)) +
+    scale_fill_manual(values = quality_score_colors, name = "Quality\nScore") +
+    scale_x_discrete(labels = c('FRT' = 'Cntrl', 'TAF2' = 'TAF2', 'NLSTAF2dIDR' = 'NLS-TAF2∆IDR') ) +
+    scale_y_continuous(breaks = seq(0, 100, 10), 
+                       expand = expansion(mult = 0, add = 2)) +
+    guides(fill = guide_legend(override.aes = list(shape = 21)),
+           shape = 'none') +
+    coord_cartesian(ylim = c(0, 100), clip = 'off') +
+    labs(y = 'PSI') +
+    theme_classic() +
+    theme(axis.text = element_text(colour = "black"),
+          axis.line = element_line(linewidth = 0.2),
+          axis.title.x = element_blank(),
+          strip.background = element_blank(),
+          strip.text = element_text(vjust = 1, lineheight = 0, 
+                                    margin = margin(t = 0, unit = 'mm')),
+          panel.grid.major = element_line(colour = 'gray84', linewidth = 0.15),
+          legend.position = c(0.93, 0.1) ) 
+}
+```
+
+Calculate z-score on a numeric matrix
+```{r, zscore formula}
+zScore <- function(mat) {
+  row_means <- apply(mat, 1, mean)
+  row_sd <- apply(mat, 1, sd)
+  # handle degenerate distribution in which the denominator (row sd) of the z-score formula is zero. 
+  # the z-score becomes undefined as the denominator of the z-score formula is zero.  
+  # this is a rare situation in general. Here I fix it by diving by 1 instead.
+  if( any(row_sd == 0) ) { row_sd[which(row_sd == 0)] <- 1 }
+  zScore_mat <- (mat - row_means) / row_sd  
+  return(zScore_mat)
+}
+```
+
+Alternative formula to z-score that used median
+
+```{r, zmad formula}
+zMad <- function(mat) {
+  row_medians <- apply(mat, 1, median)
+  row_median_abs_dev <- abs(mat - row_medians)
+  median_row_median_abs_dev <- apply(row_median_abs_dev, 1, median)
+  # conceptually row_mad is the sd. 1.482 is a constant linked to the assumption of normality of the data
+  row_mad <- median_row_median_abs_dev * 1.4826
+  
+  # If row max is zero fix it by diving by 1 instead.
+  if( any(row_mad == 0) ) { row_mad[which(row_mad == 0)] <- 1 } 
+   
+  zMad_dev <- (mat - row_medians) / row_mad
+  return(zMad_dev)
+}
+# mat <- head(tidy_full_mat)
+# zMad(mat)
+# zScore(mat)
+```
+
+## File paths
+
+Files and directories paths. All files are backed-up on the CRG cluster.
+
+```{r, projects paths}
+proj_dir <- file.path('~/mnt/narecco/projects/01_ALTdemix')
+expr_dir <- file.path(proj_dir, 'data/INCLUSION_tbl/Tanja')
+vast_tools_dir <- file.path(expr_dir, 'vast_tools')
+vast_out <- file.path(expr_dir, 'vast_tools/vast_out')
+
+psi_path <- file.path(vast_out, 'INCLUSION_LEVELS_FULL-hg38-34-v251.tab')
+expr_path <- file.path(vast_out, 'TPM-hg38-34-NORM.tab')
+
+cmpr_dir <- file.path(vast_out, 'compare_2024_03_26/min_dPSI15_min_range0_max_dPSI5')
+cmpr_HeLa_SRRM2_uniq_path <- file.path(cmpr_dir, 'HeLa_SRRM2KD_vs_CNTRL_uniq_noB3_pIR.tab')
+cmpr_HepG2_SRRM2_uniq_path <- file.path(cmpr_dir, 'HepG2_SRRM2KD_vs_CNTRL_uniq_noB3_pIR.tab')
+cmpr_HeLa_SRRM2_mrgd_path <- file.path(cmpr_dir, 'HeLa_SRRM2KD_vs_CNTRL_mrgd_noB3_pIR.tab')
+cmpr_HepG2_SRRM2_mrgd_path <- file.path(cmpr_dir, 'HepG2_SRRM2_vs_CNTRL_mrgd_noB3_pIR.tab')
+
+tidy_dir <- file.path(vast_out, 'tidy_2024_03_25')
+tidy_psi_path <- file.path(tidy_dir, 'INCLUSION_LEVELS_TIDY_HeLa_HepG2_noB3_pIR.tab')
+
+diff_dir <- file.path(vast_out, 'diff_2024_03_25/min_dPSI_min_reads10')
+diff_HeLa_SRRM2_path <- file.path(diff_dir, 'HeLa_SRRM2KD_minRead10_noB3_pIR_fltrd_MVdPSI15.tab')
+diff_HepG2_SRRM2_path <- file.path(diff_dir, 'HepG2_SRRM2KD_minRead10_noB3_pIR_fltrd_MVdPSI15.tab')
+
+plot_dir <- file.path(expr_dir, 'plots/SRRM2')
+if ( !dir.exists(plot_dir) ) { dir.create(path = plot_dir, recursive = T) }
+
+dse_IDs_dir <- file.path(expr_dir, 'diff_spliced_IDs')
+if ( !dir.exists(dse_IDs_dir) ) { dir.create(path = dse_IDs_dir, recursive = T) }
+```
+
+# Differential splicing analysis
+
+Select the differentially spliced events based on the 3 different methods described above. This is the core part of this report.
+
+Import all the tables from the `vast-tools compare` analysis in a list.
+
+```{r, import compare tables}
+list.files(cmpr_dir, full.names = T, pattern = '^He.*SRRM2.*_noB3_pIR.tab$') |>
+  lapply(function(x) {
+    read_vst_tbl(path = x, show_col_types = FALSE) |>
+      tidy_vst_psi() |>
+      mutate(comparison = gsub(pattern = '_noB3_pIR.tab', replacement = '', x) ) |>
+      mutate(comparison = gsub(pattern = '\\/Users*.*dPSI5\\/', replacement = '', comparison) ) |>
+      mutate(comparison = gsub(pattern = "vs_CNTRL_", replacement = '', comparison) ) |>
+      mutate(CellType = str_extract(pattern = "(HepG2|HeLa)", string =  comparison) )
+      # mutate(comparison = gsub(pattern = "(HepG2|HeLa)_", replacement = '', comparison) ) |>
+  }) -> list_compares
+```
+
+Bind the list of dataframes into one single dataframe.
+
+```{r, unify all comparisons into one df}
+cmpr_events <- do.call('rbind', list_compares) 
+```
+
+Create a metadata dataframe from the samples' names.
+
+```{r, create a metadata}
+cmpr_events |>
+  select(Sample, CellType, comparison) |>
+  unique() |>
+  mutate(KD = gsub(pattern = 'KD_.*$', replacement = '', comparison ) )  |>
+  mutate(KD = str_remove(string = KD, pattern = '(HepG2|HeLa)_') ) |>
+  mutate(Replicate = str_split_fixed(string = Sample, pattern = "_", n = 3)[,3]) |>
+  mutate(Replicate = ifelse(Replicate == '', yes = 'Merge', no = Replicate ) ) |>
+  mutate(PrettySample = str_remove(string = Sample, pattern = '(HepG2|HeLa)_') ) -> mtdf
+```
+
+Add metadata info to the compared events table.
+
+```{r, add metadata to compare events}
+cmpr_events <- cmpr_events |>
+  left_join(y = mtdf, by = join_by(Sample, comparison, CellType) ) 
+```
+
+### Events coverage QC
+
+::: callout-note
+Not all AS events are easily measurable and not all events have the same sequencing coverage.
+:::
+
+The AS events quantified by `vast-tools` are divided in different subgroups based on their complexity, which is defined in the 6th column (`COMPLEX`) of the compare table. This complexity resemble the underlying exon-intron structures in the gene body. The complexity of an AS exon was established based on *Score 5* from the quality column of the inclusion table. It summaries the number of reads that come from the "reference" C1-A, A-C2 and C1-C2 junctions for a wide panel of RNA-seq samples (see Irimia et al. 2014 for further information). The complexity score is the same for all the samples for any given event.
+
+Namely:
+
+-   `S`, `C1`, `C2`, `C3` are types of exon skipping events quantified by the splice site-based or transcript-based modules, with increasing degrees of complexity (e.g. `S` = simple; `C3` more complex than `C2`). 
+-   `ANN` are exon skipping events quantified by the ANNOTATION module. Their IDs start with 6 or 7 (e.g. HsaEX6000001 or HsaEX7000001). These are exons from the reference GTF annotation used to build VAST-TOOLS. However, some annotated events are not present, because of low mappability or reads imbalance. 
+-   `MIC` are exon skipping events quantified by the microexon pipeline.
+-   `IR` are intron retention event.
+-   `Alt3` are alternative acceptor events at the 3' splice site of an exon.
+-   `Alt5` are alternative donor events at the 5' splice site of an exon.
+
+In addition, an AS event can be measured at different sequencing depths. In `vast-tool` this is resembled by *Score 1* of the quality column. Each event in each samples is given a score based on the actual read counts, before mappability correction. This coverage scores are: `N`, `VLOW`, `LOW`, `OK`, and `SOK`, (where `N` = Not meeting minimum threshold, `VLOW` = Very low and `SOK` = Super okay). In general anything above `N` can be considered reliable and worth considering, but `VLOW` events might have an actual different PSI value if confirmed experimentally with a PCR on RT-cDNA. 
+
+Here I check if the quality score of the events changes when including or excluding the super sample.
+
+```{r, check_number_events_by_quality_score, fig.width = 14, fig.height = 6}
+ggplot(cmpr_events) +
+  aes(x = Quality_Score_Value, fill = comparison) +
+  facet_grid(~COMPLEX)  +  
+  geom_bar(position = position_dodge(), width = 0.75, colour = 'black', linewidth = 0.1) +
+  scale_fill_manual(values = c('#FFCC33', 'darkgoldenrod', '#009990', 'green4'),
+                    name = 'compared against control') +
+  scale_y_continuous(expand = expansion(add = c(0, 1)), n.breaks = 10) +
+  labs(x = 'AS event quantification quality score', 
+       y = 'Number of AS events') +
+  theme_bw(base_family = 'Arial') +
+  theme(axis.text = element_text(colour = 'black'),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.ticks.x = element_blank(),
+        strip.background = element_blank(),
+        plot.background = element_blank(),
+        legend.position = 'bottom',
+        legend.key.size = unit(x = 3, units = 'mm'),
+        legend.background = element_blank(),
+        legend.margin = margin(t = 0, unit = 'mm'),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(linewidth = 0.1, colour = 'gray84'),
+        panel.background = element_blank(),
+        panel.border = element_rect(linewidth = 0.2, colour = 'black')) -> p_QC_events_by_type
+p_QC_events_by_type
+```
+
+As one can see there's a gain in lower quality events if including the merged replicates super samples. This behaviour is kind of expected. 
+
+```{r save qc plot events by type and coverage}
+ggsave(filename = '01_QC_AS_Events_by_Type_Coverage_Barplot.pdf', plot = p_QC_events_by_type, 
+       device = cairo_pdf, path = plot_dir, units = 'cm', width = 30,
+       height = 10)
+```
+
+When filtering out for `N` events...
+
+```{r, filter out N in compare table}
+fltrd_cmpr_events <- subset(cmpr_events, as.integer(Quality_Score_Value) >= 2)
+```
+
+...and repeating the plot.
+
+```{r, QC_plot_after_compare_filtering, fig.width = 14, fig.height = 6}
+ggplot(fltrd_cmpr_events) +
+  aes(x = Quality_Score_Value, fill = comparison) +
+  facet_grid(~COMPLEX)  +  
+  geom_bar(position = position_dodge(), width = 0.75, colour = 'black', linewidth = 0.1) +
+  scale_fill_manual(values = c('#FFCC33', 'darkgoldenrod', '#009990', 'green4'), 
+                    name = 'compared against control') +
+  scale_y_continuous(expand = expansion(add = c(0, 1)), n.breaks = 10) +
+  labs(x = 'AS event quantification quality score', 
+       y = 'Number of AS events') +
+  theme_bw(base_family = 'Arial') +
+  theme(axis.text = element_text(colour = 'black'),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.ticks.x = element_blank(),
+        strip.background = element_blank(),
+        plot.background = element_blank(),
+        legend.position = 'bottom',
+        legend.key.size = unit(x = 3, units = 'mm'),
+        legend.background = element_blank(),
+        legend.margin = margin(t = 0, unit = 'mm'),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(linewidth = 0.1, colour = 'gray84'),
+        panel.background = element_blank(),
+        panel.border = element_rect(linewidth = 0.2, colour = 'black')) -> p_fltrd_QC_events_by_type
+p_fltrd_QC_events_by_type
+```
+
+The number of DSEs is usally always higher for the `mrgd` super samples comparison.
+There seems to be a good accordance in the number of DSE in HeLa and HepG2 cells. Also there are basically no microexon events differentially spliced.
+
+```{r save filtered qc plot events by type and coverage}
+ggsave(filename = '02_QC_AS_Events_No_N_by_Type_Filtered_by_Coverage_Barplot.pdf', 
+       plot = p_fltrd_QC_events_by_type, device = cairo_pdf, 
+       path = plot_dir, units = 'cm', width = 30, height = 10)
+```
+
+### Shared and Specific DSEs
+
+**How many of these events overlap between the different comparisons?**
+
+Make a list with all the differentially spliced events from each comparison, again filtering out the `N` events.
+
+```{r, compare common DSE}
+# get the filtered events
+lapply( list_compares, function(x){
+  subset(x, as.integer(Quality_Score_Value) >= 2) |>
+    select(GENE, EVENT, comparison) |> unique()
+}) -> diff_events_li
+
+# find events that are mis-spliced in all 4 comparisons
+# all_common_DSE_ids <- Reduce(intersect, lapply(diff_events_li, function(x) x$EVENT ) )
+HeLa_common <- Reduce(intersect, lapply(diff_events_li[1:2], function(x) x$EVENT ) )
+HepG2_common <- Reduce(intersect, lapply(diff_events_li[3:4], function(x) x$EVENT ) )
+message('Number of common DSE between HeLa and HepG2: ', length(intersect(x = HeLa_common, y = HepG2_common)), " !")
+```
+
+Make a list of different compare sets of DSEs
+
+```{r, compare list of DSE}
+# get comparisons names
+comparisons <- lapply( list_compares, function(x){ pull(x, comparison) |> unique() }) |> unlist()
+
+# get events in each comparison
+events_li <- lapply( list_compares, function(x){ 
+  subset(x, as.integer(Quality_Score_Value) >= 2) |>
+    pull(EVENT) |> unique() 
+}) 
+
+names(events_li) <- comparisons
+lapply(events_li, head, 3)
+```
+
+To show how many AS events are differentially spliced in each condition taking into consideration the replicates or the super sample, calculate the intersections between all 4 comparisons.
+
+```{r, make upset plot all interactions}
+intersection_cmpr_plt <- upset(fromList(events_li), nsets = length(comparisons),
+                               text.scale = 1.5, nintersects = NA, 
+                               mb.ratio = c(0.65, 0.35), decreasing = c(T, F),
+                               order.by = 'freq',
+                               main.bar.color = "gray16") 
+```
+
+Show the overlap as an upset plot:
+
+```{r, show_upset_plot_all, fig.width = 12, fig.height = 6}
+intersection_cmpr_plt
+```
+
+The plot above shows all possible intersections between the 4 groups. 
+
+The weird result is that there's a very small if no overlap between the knockdown in HeLa or HepG2 cells!! This requires further exploration.
+
+Because the super samples (defined with `_mrgd`) are the sum of all the 3 individual replicates, they have more coverage and can better quantify exon-exon-junction reads. This explains the increased in number of DSEs. 
+
+Save the upset plot to pdf.
+
+```{r, save upset plot all interactions, message = FALSE, warning = FALSE}
+cairo_pdf(file = file.path(plot_dir, '03_overlap_fltrd_compare_DSE_Upset.pdf'), 
+          width = 6.5, height = 4, bg = NA)
+intersection_cmpr_plt
+dev.off()
+```
+
+Separate the parts of the dataframe by the cell type to look at the ∆PSI of the `mrgd` super samples. 
+
+```{r, select only HeLa comparison }
+cmpr_events_HeLa <- subset(fltrd_cmpr_events, comparison == 'HeLa_SRRM2KD_mrgd') 
+```
+
+```{r, select only HepG2 comparison}
+cmpr_events_HepG2 <- subset(fltrd_cmpr_events, comparison == 'HepG2_SRRM2KD_mrgd') 
+```
+
+Check the overall quality / confidence of the `uniq` and `mrgd` events.
+
+```{r, plot_event_quality_score, fig.height = 9, fig.width = 7}
+plot_quality_score_stacked(cmpr_events_HeLa) +
+  labs(title = 'HeLa mrgd') -> p_cmpr_scores_bars_HeLa
+
+plot_quality_score_stacked(cmpr_events_HepG2) +
+  labs(title = 'HepG2 mrgd') -> p_cmpr_scores_bars_HepG2
+
+p_cmrp_scores_bar <- p_cmpr_scores_bars_HeLa / p_cmpr_scores_bars_HepG2
+p_cmrp_scores_bar
+```
+
+The different numbers of events tend to be similar except maybe for intron retentions and simple exon skipping that have opposite trends. Save bar plot.
+
+```{r, export cmpr event mrgd score plot HeLa and HepG2, fig.width = 5, fig.height = 4}
+ggsave(filename = '04_Compare_DSE_Score_Bar.pdf', plot = p_cmrp_scores_bar, 
+       device = cairo_pdf, path = plot_dir, units = 'cm', width = 7,
+       height = 6.5)
+```
+
+Check the distribution of ∆PSI using a histogram with binwidth of 1. The top part are all differentially spliced exons (`S`, `C1`, `C2`, and `C3`), while the bottom part are the intron retentions (`IR`).
+
+```{r, make_grouped_dPSI_histogram, fig.width = 8, fig.height = 5}
+plot_dPSI_hist_grpd(data = cmpr_events_HeLa) +
+  labs(title = 'HeLa mrgd') -> p_cmpr_dPSI_hist_HeLa
+
+plot_dPSI_hist_grpd(data = cmpr_events_HepG2) +
+  labs(title = 'HepG2 mrgd') -> p_cmpr_dPSI_hist_HepG2
+
+hist_list <- list(p_cmpr_dPSI_hist_HeLa, p_cmpr_dPSI_hist_HepG2)
+p_cmpr_dPSI_hist <- wrap_plots(hist_list, byrow = F, heights = c(1, 1) )
+p_cmpr_dPSI_hist
+```
+
+The breath of the ∆PSI of the up-regulated exons is somewhat comparable, however the number of downregulated exons in HepG2 is way lower than what detected in HeLa. 
+Importantly the HepG2 cells have many less retained introns upon SRRM2 KD, which is not observed to the same extent in HeLa cells. Save histogram plot.
+
+```{r, export cmpr dpsi histogram plot}
+ggsave(filename = '05_compare_DSE_dPSI_Hist.pdf', plot = p_cmpr_dPSI_hist, 
+       device = cairo_pdf, path = plot_dir, units = 'cm', width = 10,
+       height = 6)
+```
+
+**Explore some specific events** 
+
+
+# Conclusion
+
+::: callout-note
+I need to finish this part. 
+:::
+
+# Session Info {#sec-sessioninfo}
+
+```{r, print session info}
+sessioninfo::session_info()
+```
