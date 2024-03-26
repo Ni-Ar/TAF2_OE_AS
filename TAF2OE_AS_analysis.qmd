@@ -288,14 +288,13 @@ zScore <- function(mat) {
   # handle degenerate distribution in which the denominator (row sd) of the z-score formula is zero. 
   # the z-score becomes undefined as the denominator of the z-score formula is zero.  
   # this is a rare situation in general. Here I fix it by diving by 1 instead.
-  if( any(row_sd == 0) ) { row_sd[which(row_sd == 0)] <- 1 } 
-
+  if( any(row_sd == 0) ) { row_sd[which(row_sd == 0)] <- 1 }
   zScore_mat <- (mat - row_means) / row_sd  
   return(zScore_mat)
 }
 ```
 
-Alternative formulat to z-score that used median
+Alternative formula to z-score that used median
 
 ```{r, zmad formula}
 zMad <- function(mat) {
@@ -401,7 +400,7 @@ cmpr_events <- cmpr_events |>
 Not all AS events are easily measurable and not all events have the same sequencing coverage.
 :::
 
-The AS events quantified by `vast-tools` are divided in different subgroups based on their complexity, which is defined in the 6th column (`COMPLEX`) of the compare table. This complexity resemble the underlying exon-intron structures in the gene body. The complexity of an AS exon was established based on *Score 5* from the quality column of the inclusion table. It's summarise the number of reads that come from the "reference" C1-A, A-C2 and C1-C2 junctions for a wide panel of RNA-seq samples (see Irimia et al. 2014 for further information). The complexity score is the same for all the samples for any given event.
+The AS events quantified by `vast-tools` are divided in different subgroups based on their complexity, which is defined in the 6th column (`COMPLEX`) of the compare table. This complexity resemble the underlying exon-intron structures in the gene body. The complexity of an AS exon was established based on *Score 5* from the quality column of the inclusion table. It summaries the number of reads that come from the "reference" C1-A, A-C2 and C1-C2 junctions for a wide panel of RNA-seq samples (see Irimia et al. 2014 for further information). The complexity score is the same for all the samples for any given event.
 
 Namely:
 
