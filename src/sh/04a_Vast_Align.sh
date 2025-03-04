@@ -14,7 +14,7 @@ PROJ_NAME="01_ALTdemix"
 EXPERIMENT_NAME="Tanja"
 JOB_NAME="VstAlgn"
 QUEUE_NAME="long-sl7,mem_512"
-CRG_EMAIL="niccolo.arecco@crg.eu"
+CRG_EMAIL="***.***@crg.eu"
 
 # Library sequencing layout
 SEQ_LAYOUT="PE" # "PE" or "SE"

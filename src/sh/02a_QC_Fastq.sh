@@ -21,7 +21,7 @@ PROJ_NAME="01_ALTdemix"
 EXPERIMENT_NAME="Tanja"
 JOB_NAME="FstQC"
 QUEUE_NAME="long-sl7"
-CRG_EMAIL="niccolo.arecco@crg.eu"
+CRG_EMAIL="***.***@crg.eu"
 
 # Set Up directories paths
 PROJ_DIR="/users/mirimia/narecco/projects/${PROJ_NAME}"

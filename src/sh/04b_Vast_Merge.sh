@@ -14,7 +14,7 @@ PROJ_NAME="01_ALTdemix"
 EXPERIMENT_NAME="Tanja"
 JOB_NAME="VstMrg"
 QUEUE_NAME="long-sl7"
-CRG_EMAIL="niccolo.arecco@crg.eu"
+CRG_EMAIL="***.***@crg.eu"
 
 # VAST-TOOLS OPTIONS
 VAST_SPECIES="hg38"
