@@ -12,7 +12,7 @@ This repository houses the code used to generate the plots in figure 6 presented
 
 > [!TIP]
 > For easy access to each analysis report, visit our main homepage with direct links to the analysis reports:
-> 🔗 [Main Homepage](https://htmlpreview.github.io/?https://github.com/Ni-Ar/TAF2_OE_AS/tree/main/index.html)
+> 🔗 [Main Homepage](https://htmlpreview.github.io/?https://github.com/Ni-Ar/TAF2_OE_AS/blob/main/index.html)
 
 Feel free to explore the code and reproduce our findings! 🌟
 
