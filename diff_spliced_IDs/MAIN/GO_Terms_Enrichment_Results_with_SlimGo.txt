@@ -1,0 +1,587 @@
+"GROUP"	"Gene Ontology"	"Term"	"-log10.p-value"
+"TAF2_EXONS"	"Molecular Function"	"GTPase regulator activity"	7.245614783200379
+"TAF2_EXONS"	"Cellular Component"	"apical part of cell"	4.128215764448956
+"TAF2_EXONS"	"Biological Process"	"disaccharide metabolic process"	3.7490745367437315
+"TAF2_EXONS"	"Cellular Component"	"cell periphery"	3.7325917889261433
+"TAF2_EXONS"	"Biological Process"	"lipid phosphorylation"	3.3628555305405876
+"TAF2_EXONS"	"Biological Process"	"detection of other organism"	3.3628555305405876
+"TAF2_EXONS"	"Molecular Function"	"ATP-dependent diacylglycerol kinase activity"	3.355393430927975
+"TAF2_EXONS"	"Biological Process"	"regulation of GTPase activity"	3.3230453159022666
+"TAF2_EXONS"	"Molecular Function"	"monoatomic ion channel activity"	3.1865756244014887
+"TAF2_EXONS"	"Biological Process"	"plasma membrane bounded cell projection assembly"	3.171418276803654
+"TAF2_EXONS"	"Biological Process"	"tertiary alcohol biosynthetic process"	3.0735256622149913
+"TAF2_EXONS"	"Cellular Component"	"cation channel complex"	3.0675767449528695
+"TAF2_EXONS"	"Biological Process"	"cilium movement"	2.9459207379156878
+"TAF2_EXONS"	"Cellular Component"	"plasma membrane bounded cell projection"	2.9057148421774324
+"TAF2_EXONS"	"Molecular Function"	"DNA-binding transcription factor activity"	2.8988990448424983
+"TAF2_EXONS"	"Biological Process"	"beta-alanine metabolic process"	2.8916778507306278
+"TAF2_EXONS"	"Biological Process"	"positive regulation of heterotypic cell-cell adhesion"	2.8916778507306278
+"TAF2_EXONS"	"Molecular Function"	"vasoactive intestinal polypeptide receptor activity"	2.886650714947865
+"TAF2_EXONS"	"Molecular Function"	"maltose alpha-glucosidase activity"	2.886650714947865
+"TAF2_EXONS"	"Biological Process"	"cilium-dependent cell motility"	2.827015311062254
+"TAF2_EXONS"	"Biological Process"	"regulation of small GTPase mediated signal transduction"	2.786908521613722
+"TAF2_EXONS"	"Biological Process"	"cerebellum development"	2.6703293328343447
+"TAF2_EXONS"	"Molecular Function"	"RNA polymerase II transcription regulatory region sequence-specific DNA binding"	2.6674512803715933
+"TAF2_EXONS"	"Cellular Component"	"neuronal cell body"	2.456325812359389
+"TAF2_EXONS"	"Biological Process"	"response to cAMP"	2.444888362332612
+"TAF2_EXONS"	"Cellular Component"	"cytoskeleton"	2.436729981204483
+"TAF2_EXONS"	"Biological Process"	"thiamine transport"	2.4250084555121107
+"TAF2_EXONS"	"Molecular Function"	"structural constituent of muscle"	2.3768359228086373
+"TAF2_EXONS"	"Biological Process"	"multicellular organismal response to stress"	2.2814820908691535
+"TAF2_EXONS"	"Biological Process"	"protein kinase C-activating G protein-coupled receptor signaling pathway"	2.21525437007753
+"TAF2_EXONS"	"Biological Process"	"regulation of heart rate by chemical signal"	2.1343989479146517
+"TAF2_EXONS"	"Cellular Component"	"dendrite membrane"	2.1109905774221343
+"TAF2_EXONS"	"Biological Process"	"melanin biosynthetic process"	2.1018875971865336
+"TAF2_EXONS"	"Molecular Function"	"cAMP binding"	2.0949196990401204
+"TAF2_EXONS"	"Biological Process"	"negative regulation of peptidyl-serine phosphorylation"	2.0761109691402493
+"TAF2_EXONS"	"Biological Process"	"cellular response to macrophage colony-stimulating factor stimulus"	1.9229391527531203
+"TAF2_EXONS"	"Biological Process"	"negative regulation of neuron projection regeneration"	1.9229391527531203
+"TAF2_EXONS"	"Molecular Function"	"ankyrin binding"	1.9180997982406527
+"TAF2_EXONS"	"Cellular Component"	"phagocytic cup"	1.9152198537185012
+"TAF2_EXONS"	"Biological Process"	"olefinic compound biosynthetic process"	1.9062871436131084
+"TAF2_EXONS"	"Cellular Component"	"receptor complex"	1.9056367143704778
+"TAF2_EXONS"	"Biological Process"	"positive regulation of interleukin-1 beta production"	1.8277619655351625
+"TAF2_EXONS"	"Cellular Component"	"neuron to neuron synapse"	1.827514957160647
+"TAF2_EXONS"	"Biological Process"	"localization of cell"	1.8269863770806762
+"TAF2_EXONS"	"Biological Process"	"locomotion"	1.7982730733167982
+"TAF2_EXONS"	"Biological Process"	"nucleotide-binding oligomerization domain containing 1 signaling pathway"	1.7572051538603641
+"TAF2_EXONS"	"Biological Process"	"cell development"	1.7536505413402128
+"TAF2_EXONS"	"Molecular Function"	"dystroglycan binding"	1.7524275593461953
+"TAF2_EXONS"	"Molecular Function"	"L-glutamate transmembrane transporter activity"	1.7524275593461953
+"TAF2_EXONS"	"Cellular Component"	"plasma membrane protein complex"	1.7475093682424268
+"TAF2_EXONS"	"Biological Process"	"protein mannosylation"	1.7421902535989349
+"TAF2_EXONS"	"Molecular Function"	"phosphatidic acid binding"	1.7354979276084703
+"TAF2_EXONS"	"Biological Process"	"cell-substrate junction assembly"	1.6979801738700089
+"TAF2_EXONS"	"Cellular Component"	"somatodendritic compartment"	1.6856338986288049
+"TAF2_EXONS"	"Biological Process"	"epithelial cilium movement involved in extracellular fluid movement"	1.6693307120305196
+"TAF2_EXONS"	"Molecular Function"	"glycosaminoglycan binding"	1.6501496810299934
+"TAF2_EXONS"	"Biological Process"	"neural retina development"	1.6226847465182253
+"TAF2_EXONS"	"Biological Process"	"regulation of stem cell division"	1.6214025249210773
+"TAF2_EXONS"	"Biological Process"	"positive regulation of behavior"	1.6214025249210773
+"TAF2_EXONS"	"Biological Process"	"response to axon injury"	1.5886312913570972
+"TAF2_EXONS"	"Biological Process"	"spermatid development"	1.5874923109270698
+"TAF2_EXONS"	"Biological Process"	"cell-cell fusion"	1.5767687398954222
+"TAF2_EXONS"	"Biological Process"	"potassium ion transmembrane transport"	1.5738627636717335
+"TAF2_EXONS"	"Biological Process"	"photoreceptor cell maintenance"	1.5383707787565821
+"TAF2_EXONS"	"Cellular Component"	"canonical inflammasome complex"	1.512915068165835
+"TAF2_EXONS"	"Cellular Component"	"germ plasm"	1.512915068165835
+"TAF2_EXONS"	"Biological Process"	"response to light intensity"	1.506757184095065
+"TAF2_EXONS"	"Biological Process"	"response to cobalt ion"	1.506757184095065
+"TAF2_EXONS"	"Biological Process"	"negative regulation of membrane potential"	1.506757184095065
+"TAF2_EXONS"	"Molecular Function"	"CARD domain binding"	1.5021018443380885
+"TAF2_EXONS"	"Biological Process"	"syncytium formation"	1.4903953543768051
+"TAF2_EXONS"	"Biological Process"	"photoreceptor cell development"	1.4791830150341736
+"TAF2_EXONS"	"Cellular Component"	"autolysosome lumen"	1.4485454833327078
+"TAF2_EXONS"	"Cellular Component"	"perisynaptic space"	1.4485454833327078
+"TAF2_EXONS"	"Cellular Component"	"TERT-RMRP complex"	1.4485454833327078
+"TAF2_EXONS"	"Biological Process"	"cellular response to Thyroglobulin triiodothyronine"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"response to anesthetic"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"notochord regression"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"vacuolar sequestering"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"positive regulation of hair cycle"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"muscle attachment"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"glucuronoside transport"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"nitric oxide production involved in inflammatory response"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"protein localization to microvillus"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"positive regulation of matrix metallopeptidase secretion"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"negative regulation of chloride transport"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"negative regulation of double-strand break repair via single-strand annealing"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"protein depalmitoleylation"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"negative regulation of anti-Mullerian hormone signaling pathway"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"IgG immunoglobulin transcytosis in epithelial cells mediated by FcRn immunoglobulin receptor"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"positive regulation of dendritic cell antigen processing and presentation"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"positive regulation of transdifferentiation"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"barbed-end actin filament uncapping"	1.4452148760562185
+"TAF2_EXONS"	"Biological Process"	"positive regulation of transcription from RNA polymerase II promoter by galactose"	1.4452148760562185
+"TAF2_EXONS"	"Molecular Function"	"melatonin binding"	1.4427229880333254
+"TAF2_EXONS"	"Molecular Function"	"ciliary neurotrophic factor binding"	1.4427229880333254
+"TAF2_EXONS"	"Molecular Function"	"glutamine-phenylpyruvate transaminase activity"	1.4427229880333254
+"TAF2_EXONS"	"Molecular Function"	"IgG binding"	1.4427229880333254
+"TAF2_EXONS"	"Molecular Function"	"glucuronoside transmembrane transporter activity"	1.4427229880333254
+"TAF2_EXONS"	"Molecular Function"	"phosphoribosylaminoimidazolesuccinocarboxamide synthase activity"	1.4427229880333254
+"TAF2_EXONS"	"Molecular Function"	"galactosylgalactosylglucosylceramide beta-D-acetylgalactosaminyltransferase activity"	1.4427229880333254
+"TAF2_EXONS"	"Molecular Function"	"peptidyl-arginine 3-dioxygenase activity"	1.4427229880333254
+"TAF2_EXONS"	"Molecular Function"	"palmitoleyl hydrolase activity"	1.4427229880333254
+"TAF2_EXONS"	"Molecular Function"	"N-(long-chain-acyl)ethanolamine deacylase activity"	1.4427229880333254
+"TAF2_EXONS"	"Molecular Function"	"rRNA (uridine-N3-)-methyltransferase activity"	1.4427229880333254
+"TAF2_EXONS"	"Molecular Function"	"trans-L-3-hydroxyproline dehydratase activity"	1.4427229880333254
+"TAF2_EXONS"	"Molecular Function"	"thromboxane A2 receptor binding"	1.4427229880333254
+"TAF2_EXONS"	"Molecular Function"	"serine racemase activity"	1.4427229880333254
+"TAF2_EXONS"	"Cellular Component"	"tertiary granule membrane"	1.420811338653447
+"TAF2_EXONS"	"Biological Process"	"collagen fibril organization"	1.372868210127492
+"TAF2_EXONS"	"Biological Process"	"aorta development"	1.3365347068102518
+"∆IDR_EXONS"	"Molecular Function"	"high voltage-gated calcium channel activity"	4.3463524283646855
+"∆IDR_EXONS"	"Molecular Function"	"DNA-binding transcription factor activity"	3.7986253979338422
+"∆IDR_EXONS"	"Biological Process"	"cilium movement"	3.6608473405673703
+"∆IDR_EXONS"	"Molecular Function"	"voltage-gated channel activity"	3.581596006879294
+"∆IDR_EXONS"	"Biological Process"	"epithelial cilium movement involved in extracellular fluid movement"	3.4005131573336467
+"∆IDR_EXONS"	"Biological Process"	"central nervous system neuron differentiation"	3.3313695579821445
+"∆IDR_EXONS"	"Molecular Function"	"RNA polymerase II transcription regulatory region sequence-specific DNA binding"	3.2653776735690623
+"∆IDR_EXONS"	"Cellular Component"	"voltage-gated calcium channel complex"	3.1965798672521006
+"∆IDR_EXONS"	"Biological Process"	"cell-matrix adhesion"	2.9398209768011
+"∆IDR_EXONS"	"Biological Process"	"regulation of presynaptic cytosolic calcium ion concentration"	2.9118980739610025
+"∆IDR_EXONS"	"Biological Process"	"negative regulation of microtubule binding"	2.9118980739610025
+"∆IDR_EXONS"	"Biological Process"	"copper ion export"	2.9118980739610025
+"∆IDR_EXONS"	"Molecular Function"	"vasoactive intestinal polypeptide receptor activity"	2.8963465541496403
+"∆IDR_EXONS"	"Molecular Function"	"dystroglycan binding"	2.8488802884946964
+"∆IDR_EXONS"	"Cellular Component"	"photoreceptor ribbon synapse"	2.8447019762176433
+"∆IDR_EXONS"	"Biological Process"	"hepatocyte differentiation"	2.513987741816027
+"∆IDR_EXONS"	"Biological Process"	"complement receptor mediated signaling pathway"	2.444984195676308
+"∆IDR_EXONS"	"Biological Process"	"regulation of embryonic cell shape"	2.444984195676308
+"∆IDR_EXONS"	"Biological Process"	"antral ovarian follicle growth"	2.444984195676308
+"∆IDR_EXONS"	"Biological Process"	"cilium assembly"	2.3942554436677397
+"∆IDR_EXONS"	"Cellular Component"	"sarcolemma"	2.356383392934064
+"∆IDR_EXONS"	"Molecular Function"	"GTPase regulator activity"	2.3532785777856264
+"∆IDR_EXONS"	"Biological Process"	"cilium-dependent cell motility"	2.247212985846099
+"∆IDR_EXONS"	"Cellular Component"	"ciliary base"	2.22636847118533
+"∆IDR_EXONS"	"Biological Process"	"negative regulation of triglyceride metabolic process"	2.1541316926212137
+"∆IDR_EXONS"	"Cellular Component"	"axon initial segment"	2.136149258699027
+"∆IDR_EXONS"	"Cellular Component"	"centriole"	2.091799106462317
+"∆IDR_EXONS"	"Molecular Function"	"tubulin binding"	2.08888269681338
+"∆IDR_EXONS"	"Biological Process"	"localization of cell"	1.9927425334632602
+"∆IDR_EXONS"	"Biological Process"	"focal adhesion assembly"	1.9545499408290623
+"∆IDR_EXONS"	"Cellular Component"	"collagen type IV trimer"	1.9246694417011023
+"∆IDR_EXONS"	"Molecular Function"	"transaminase activity"	1.9125780424571857
+"∆IDR_EXONS"	"Molecular Function"	"carbohydrate kinase activity"	1.8271145241760636
+"∆IDR_EXONS"	"Biological Process"	"glomerular basement membrane development"	1.7764564135444059
+"∆IDR_EXONS"	"Biological Process"	"defense response to Gram-negative bacterium"	1.769062010897165
+"∆IDR_EXONS"	"Biological Process"	"atrial septum development"	1.769062010897165
+"∆IDR_EXONS"	"Molecular Function"	"phosphatidic acid transfer activity"	1.761653165846077
+"∆IDR_EXONS"	"Cellular Component"	"cell periphery"	1.7577428425333945
+"∆IDR_EXONS"	"Biological Process"	"regulation of DNA-templated transcription"	1.739492310261913
+"∆IDR_EXONS"	"Biological Process"	"carbohydrate phosphorylation"	1.6959402923950118
+"∆IDR_EXONS"	"Biological Process"	"cellular response to cholesterol"	1.6404153162142205
+"∆IDR_EXONS"	"Biological Process"	"positive regulation of T cell apoptotic process"	1.6404153162142205
+"∆IDR_EXONS"	"Biological Process"	"reverse cholesterol transport"	1.6404153162142205
+"∆IDR_EXONS"	"Biological Process"	"high-density lipoprotein particle remodeling"	1.6404153162142205
+"∆IDR_EXONS"	"Biological Process"	"locomotion"	1.613054533103779
+"∆IDR_EXONS"	"Cellular Component"	"perikaryon"	1.577510502642653
+"∆IDR_EXONS"	"Molecular Function"	"vitamin binding"	1.5726334022726978
+"∆IDR_EXONS"	"Biological Process"	"positive regulation of mitochondrial membrane permeability involved in apoptotic process"	1.5650395467676579
+"∆IDR_EXONS"	"Cellular Component"	"basolateral plasma membrane"	1.5314384391053042
+"∆IDR_EXONS"	"Biological Process"	"primary alcohol biosynthetic process"	1.5255330369424496
+"∆IDR_EXONS"	"Molecular Function"	"CARD domain binding"	1.5110967976507474
+"∆IDR_EXONS"	"Biological Process"	"cell cycle comprising mitosis without cytokinesis"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"muscle attachment"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"glucuronoside transport"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"protein localization to T-tubule"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"protein depalmitoleylation"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"negative regulation of double-strand break repair via single-strand annealing"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"negative regulation of synaptic vesicle clustering"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"regulation of definitive erythrocyte differentiation"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"lateral semicircular canal development"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"sagittal suture morphogenesis"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"myotube cell development involved in skeletal muscle regeneration"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"positive regulation of macrophage inflammatory protein 1 alpha production"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"IgG immunoglobulin transcytosis in epithelial cells mediated by FcRn immunoglobulin receptor"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"positive regulation of high-density lipoprotein particle clearance"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"positive regulation of activation of Janus kinase activity"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"larynx development"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"primary adaptive immune response involving T cells and B cells"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"carbamoyl phosphate biosynthetic process"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"hypoglossal nerve morphogenesis"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"behavioral response to acetic acid induced pain"	1.45530919714448
+"∆IDR_EXONS"	"Biological Process"	"membrane depolarization during atrial cardiac muscle cell action potential"	1.45530919714448
+"∆IDR_EXONS"	"Molecular Function"	"ciliary neurotrophic factor binding"	1.447563640289579
+"∆IDR_EXONS"	"Molecular Function"	"ethanolamine-phosphate phospho-lyase activity"	1.447563640289579
+"∆IDR_EXONS"	"Molecular Function"	"IgG binding"	1.447563640289579
+"∆IDR_EXONS"	"Molecular Function"	"glucuronoside transmembrane transporter activity"	1.447563640289579
+"∆IDR_EXONS"	"Molecular Function"	"thiamine diphosphokinase activity"	1.447563640289579
+"∆IDR_EXONS"	"Molecular Function"	"phosphatidylcholine-sterol O-acyltransferase activity"	1.447563640289579
+"∆IDR_EXONS"	"Molecular Function"	"carbamoyl-phosphate synthase (ammonia) activity"	1.447563640289579
+"∆IDR_EXONS"	"Molecular Function"	"glycosylphosphatidylinositol phospholipase D activity"	1.447563640289579
+"∆IDR_EXONS"	"Molecular Function"	"N-(long-chain-acyl)ethanolamine deacylase activity"	1.447563640289579
+"∆IDR_EXONS"	"Molecular Function"	"cholest-5-ene-3-beta,7-alpha-diol 3-beta-dehydrogenase activity"	1.447563640289579
+"∆IDR_EXONS"	"Molecular Function"	"CCA tRNA nucleotidyltransferase activity"	1.447563640289579
+"∆IDR_EXONS"	"Molecular Function"	"8-oxo-7,8-dihydroguanine DNA N-glycosylase activity"	1.447563640289579
+"∆IDR_EXONS"	"Cellular Component"	"macrophage migration inhibitory factor receptor complex"	1.4461316991837256
+"∆IDR_EXONS"	"Biological Process"	"collagen-activated signaling pathway"	1.4264143981621413
+"∆IDR_EXONS"	"Cellular Component"	"Wnt signalosome"	1.4095251237426216
+"∆IDR_EXONS"	"Cellular Component"	"contractile ring"	1.4095251237426216
+"∆IDR_EXONS"	"Cellular Component"	"dystrophin-associated glycoprotein complex"	1.4095251237426216
+"∆IDR_EXONS"	"Cellular Component"	"apical part of cell"	1.3951533837846704
+"∆IDR_EXONS"	"Cellular Component"	"Golgi lumen"	1.3755713728095778
+"∆IDR_EXONS"	"Molecular Function"	"metallocarboxypeptidase activity"	1.3254253812263104
+"SRRM2_EXONS"	"Biological Process"	"meiosis I"	4.493755661088509
+"SRRM2_EXONS"	"Cellular Component"	"Fanconi anaemia nuclear complex"	4.451267674904669
+"SRRM2_EXONS"	"Biological Process"	"interstrand cross-link repair"	4.4008721935482455
+"SRRM2_EXONS"	"Molecular Function"	"GTPase activator activity"	4.264567194074605
+"SRRM2_EXONS"	"Biological Process"	"regulation of CD40 signaling pathway"	3.063482497502834
+"SRRM2_EXONS"	"Biological Process"	"adenylate cyclase-activating adrenergic receptor signaling pathway"	2.868952025721392
+"SRRM2_EXONS"	"Cellular Component"	"contractile actin filament bundle"	2.8464517779707275
+"SRRM2_EXONS"	"Molecular Function"	"5'-deoxyribose-5-phosphate lyase activity"	2.6765963672873854
+"SRRM2_EXONS"	"Molecular Function"	"histone H3K27 methyltransferase activity"	2.6765963672873854
+"SRRM2_EXONS"	"Molecular Function"	"protein demethylase activity"	2.563765766551919
+"SRRM2_EXONS"	"Biological Process"	"protein dealkylation"	2.493497351745513
+"SRRM2_EXONS"	"Molecular Function"	"nuclear glucocorticoid receptor binding"	2.482000395866304
+"SRRM2_EXONS"	"Biological Process"	"regulation of small GTPase mediated signal transduction"	2.4465276491132384
+"SRRM2_EXONS"	"Biological Process"	"short-chain fatty acid biosynthetic process"	2.429498353439061
+"SRRM2_EXONS"	"Biological Process"	"tricarboxylic acid transport"	2.429498353439061
+"SRRM2_EXONS"	"Biological Process"	"vagus nerve development"	2.429498353439061
+"SRRM2_EXONS"	"Biological Process"	"inhibition of cysteine-type endopeptidase activity involved in apoptotic process"	2.429498353439061
+"SRRM2_EXONS"	"Molecular Function"	"choline kinase activity"	2.4232319316153927
+"SRRM2_EXONS"	"Molecular Function"	"ABC-type vitamin B12 transporter activity"	2.4232319316153927
+"SRRM2_EXONS"	"Cellular Component"	"anchoring collagen complex"	2.4231977659358384
+"SRRM2_EXONS"	"Biological Process"	"response to fungicide"	2.4048204242739146
+"SRRM2_EXONS"	"Biological Process"	"protein O-linked glycosylation"	2.3585893230832484
+"SRRM2_EXONS"	"Biological Process"	"peptidyl-glutamic acid modification"	2.338678237975294
+"SRRM2_EXONS"	"Biological Process"	"synaptonemal complex assembly"	2.338678237975294
+"SRRM2_EXONS"	"Molecular Function"	"extracellular matrix structural constituent"	2.3228445967579883
+"SRRM2_EXONS"	"Molecular Function"	"dioxygenase activity"	2.2822460980454857
+"SRRM2_EXONS"	"Biological Process"	"embryonic pattern specification"	2.200413311615721
+"SRRM2_EXONS"	"Biological Process"	"cAMP metabolic process"	2.0752465287365878
+"SRRM2_EXONS"	"Biological Process"	"peroxisome organization"	2.0703493121071674
+"SRRM2_EXONS"	"Cellular Component"	"COPII vesicle coat"	2.0641521572881594
+"SRRM2_EXONS"	"Cellular Component"	"cilium"	2.0628274202451173
+"SRRM2_EXONS"	"Biological Process"	"response to ethanol"	2.046495822448181
+"SRRM2_EXONS"	"Biological Process"	"MAPK export from nucleus"	1.9703600124627993
+"SRRM2_EXONS"	"Biological Process"	"5-methylcytosine metabolic process"	1.9703600124627993
+"SRRM2_EXONS"	"Biological Process"	"protein carboxylation"	1.9703600124627993
+"SRRM2_EXONS"	"Biological Process"	"anterograde axonal transport of mitochondrion"	1.9703600124627993
+"SRRM2_EXONS"	"Biological Process"	"N-acetylglucosamine catabolic process"	1.9703600124627993
+"SRRM2_EXONS"	"Molecular Function"	"POZ domain binding"	1.9642281811580846
+"SRRM2_EXONS"	"Molecular Function"	"type 1 angiotensin receptor binding"	1.9642281811580846
+"SRRM2_EXONS"	"Cellular Component"	"RAVE complex"	1.964195093002896
+"SRRM2_EXONS"	"Cellular Component"	"TSC1-TSC2 complex"	1.964195093002896
+"SRRM2_EXONS"	"Cellular Component"	"laminin-5 complex"	1.964195093002896
+"SRRM2_EXONS"	"Biological Process"	"regulation of membrane lipid distribution"	1.9315721434351352
+"SRRM2_EXONS"	"Biological Process"	"demethylation"	1.866783591898942
+"SRRM2_EXONS"	"Biological Process"	"lipid transport"	1.8583598730552953
+"SRRM2_EXONS"	"Molecular Function"	"unmethylated CpG binding"	1.8330038791503245
+"SRRM2_EXONS"	"Biological Process"	"vesicle cargo loading"	1.7966279918269839
+"SRRM2_EXONS"	"Biological Process"	"interferon-alpha production"	1.7623234521803544
+"SRRM2_EXONS"	"Molecular Function"	"metal ion binding"	1.7026008177465173
+"SRRM2_EXONS"	"Molecular Function"	"mismatch repair complex binding"	1.6981031738953605
+"SRRM2_EXONS"	"Cellular Component"	"dense core granule"	1.698053596689313
+"SRRM2_EXONS"	"Biological Process"	"negative regulation of lysosome organization"	1.687217316515746
+"SRRM2_EXONS"	"Biological Process"	"negative regulation of secondary metabolite biosynthetic process"	1.687217316515746
+"SRRM2_EXONS"	"Cellular Component"	"LUBAC complex"	1.6811865231558758
+"SRRM2_EXONS"	"Biological Process"	"somatic hypermutation of immunoglobulin genes"	1.5879750364860707
+"SRRM2_EXONS"	"Molecular Function"	"3',5'-cyclic-AMP phosphodiesterase activity"	1.5797321312541996
+"SRRM2_EXONS"	"Cellular Component"	"endoplasmic reticulum-plasma membrane contact site"	1.5796838737539893
+"SRRM2_EXONS"	"Biological Process"	"dendrite development"	1.5790841911572375
+"SRRM2_EXONS"	"Biological Process"	"odontogenesis of dentin-containing tooth"	1.5310493686901574
+"SRRM2_EXONS"	"Biological Process"	"chromatin remodeling"	1.527471747113274
+"SRRM2_EXONS"	"Cellular Component"	"RNAi effector complex"	1.5062034212007362
+"SRRM2_EXONS"	"Biological Process"	"maintenance of lens transparency"	1.4831594605455627
+"SRRM2_EXONS"	"Biological Process"	"protein to membrane docking"	1.4831594605455627
+"SRRM2_EXONS"	"Biological Process"	"regulation of T-helper 1 cell differentiation"	1.4831594605455627
+"SRRM2_EXONS"	"Molecular Function"	"CoA-ligase activity"	1.3805017253593006
+"SRRM2_EXONS"	"Biological Process"	"visual learning"	1.379013282115138
+"SRRM2_EXONS"	"Biological Process"	"regulation of pro-B cell differentiation"	1.3247619117955927
+"SRRM2_EXONS"	"Biological Process"	"coronary artery morphogenesis"	1.3247619117955927
+"SRRM2_EXONS"	"Molecular Function"	"potassium ion binding"	1.3190246732763455
+"TAF2_INTRONS"	"Molecular Function"	"passive transmembrane transporter activity"	5.167664588861345
+"TAF2_INTRONS"	"Molecular Function"	"inorganic anion transmembrane transporter activity"	4.603516807121843
+"TAF2_INTRONS"	"Biological Process"	"inorganic anion transmembrane transport"	4.033861197462095
+"TAF2_INTRONS"	"Biological Process"	"monoatomic anion transmembrane transport"	3.700564073721797
+"TAF2_INTRONS"	"Biological Process"	"primary alcohol biosynthetic process"	3.536226575992416
+"TAF2_INTRONS"	"Biological Process"	"regulation of steroid hormone biosynthetic process"	3.2529797421961812
+"TAF2_INTRONS"	"Biological Process"	"interleukin-1 beta production"	3.242907237584174
+"TAF2_INTRONS"	"Biological Process"	"transmembrane transport"	3.186867858214855
+"TAF2_INTRONS"	"Molecular Function"	"HMG box domain binding"	3.169499487058657
+"TAF2_INTRONS"	"Biological Process"	"forebrain dorsal/ventral pattern formation"	3.144704160998064
+"TAF2_INTRONS"	"Biological Process"	"olefinic compound biosynthetic process"	2.924272549108547
+"TAF2_INTRONS"	"Biological Process"	"positive regulation of NF-kappaB transcription factor activity"	2.7666324820141446
+"TAF2_INTRONS"	"Molecular Function"	"ADP phosphatase activity"	2.6552995700366226
+"TAF2_INTRONS"	"Biological Process"	"double-strand break repair via single-strand annealing"	2.63075774984626
+"TAF2_INTRONS"	"Biological Process"	"spontaneous synaptic transmission"	2.63075774984626
+"TAF2_INTRONS"	"Biological Process"	"meiosis I"	2.504581804077353
+"TAF2_INTRONS"	"Molecular Function"	"carnitine O-acyltransferase activity"	2.4835399702419956
+"TAF2_INTRONS"	"Cellular Component"	"dendritic spine membrane"	2.461470863587571
+"TAF2_INTRONS"	"Biological Process"	"cellular response to acidic pH"	2.4591244388344617
+"TAF2_INTRONS"	"Biological Process"	"protein import into peroxisome matrix, receptor recycling"	2.4591244388344617
+"TAF2_INTRONS"	"Biological Process"	"regulation of glucocorticoid biosynthetic process"	2.3174488532013116
+"TAF2_INTRONS"	"Molecular Function"	"cardiolipin binding"	2.2211209426297605
+"TAF2_INTRONS"	"Molecular Function"	"transmembrane signaling receptor activity"	2.1397610967140723
+"TAF2_INTRONS"	"Molecular Function"	"serine-type endopeptidase inhibitor activity"	2.0730709878901976
+"TAF2_INTRONS"	"Molecular Function"	"metallocarboxypeptidase activity"	2.023693354714234
+"TAF2_INTRONS"	"Biological Process"	"carnitine metabolic process"	1.999779857180527
+"TAF2_INTRONS"	"Biological Process"	"negative regulation of blood circulation"	1.9170600006150829
+"TAF2_INTRONS"	"Biological Process"	"organic anion transport"	1.8903958271838261
+"TAF2_INTRONS"	"Molecular Function"	"carbohydrate derivative transmembrane transporter activity"	1.8400186261683829
+"TAF2_INTRONS"	"Molecular Function"	"advanced glycation end-product receptor activity"	1.8196359568330078
+"TAF2_INTRONS"	"Molecular Function"	"malonyl-CoA synthetase activity"	1.8196359568330078
+"TAF2_INTRONS"	"Molecular Function"	"cerebroside-sulfatase activity"	1.8196359568330078
+"TAF2_INTRONS"	"Molecular Function"	"alkenylglycerophosphoethanolamine hydrolase activity"	1.8196359568330078
+"TAF2_INTRONS"	"Molecular Function"	"long-chain fatty acid omega-hydroxylase activity"	1.8196359568330078
+"TAF2_INTRONS"	"Molecular Function"	"rRNA (uridine-N3-)-methyltransferase activity"	1.8196359568330078
+"TAF2_INTRONS"	"Molecular Function"	"intramolecular lyase activity"	1.8196359568330078
+"TAF2_INTRONS"	"Cellular Component"	"Slx1-Slx4 complex"	1.808420849761989
+"TAF2_INTRONS"	"Biological Process"	"fibroblast growth factor receptor apoptotic signaling pathway"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"positive regulation of heterotypic cell-cell adhesion"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"positive regulation of cell communication by electrical coupling"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"response to capsazepine"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"forebrain-midbrain boundary formation"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"pancreatic A cell development"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"CD80 biosynthetic process"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"malonate catabolic process"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"sensory neuron migration"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"positive regulation of membrane depolarization during cardiac muscle cell action potential"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"positive regulation of antigen processing and presentation"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"coumarin metabolic process"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"negative regulation of macropinocytosis"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"glucuronoside transport"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"isoquinoline alkaloid metabolic process"	1.8071753560425359
+"TAF2_INTRONS"	"Biological Process"	"negative regulation of cellular organofluorine metabolic process"	1.8071753560425359
+"TAF2_INTRONS"	"Molecular Function"	"transaminase activity"	1.7977122917522592
+"TAF2_INTRONS"	"Biological Process"	"bone maturation"	1.7741720103646685
+"TAF2_INTRONS"	"Biological Process"	"3'-UTR-mediated mRNA destabilization"	1.7116387971659426
+"TAF2_INTRONS"	"Biological Process"	"defense response to Gram-negative bacterium"	1.6538988586626902
+"TAF2_INTRONS"	"Cellular Component"	"neuromuscular junction"	1.5660148629117754
+"TAF2_INTRONS"	"Cellular Component"	"chloride channel complex"	1.5525777579222542
+"TAF2_INTRONS"	"Cellular Component"	"pi-body"	1.5107568735756856
+"TAF2_INTRONS"	"Biological Process"	"semaphorin-plexin signaling pathway involved in bone trabecula morphogenesis"	1.5095202920690638
+"TAF2_INTRONS"	"Biological Process"	"regulation of asymmetric cell division"	1.5095202920690638
+"TAF2_INTRONS"	"Biological Process"	"cellular response to magnesium ion"	1.5095202920690638
+"TAF2_INTRONS"	"Biological Process"	"cell differentiation involved in salivary gland development"	1.5095202920690638
+"TAF2_INTRONS"	"Biological Process"	"regulation of high-density lipoprotein particle assembly"	1.5095202920690638
+"TAF2_INTRONS"	"Biological Process"	"negative regulation of lymphangiogenesis"	1.5095202920690638
+"TAF2_INTRONS"	"Biological Process"	"maintenance of protein location in plasma membrane"	1.5095202920690638
+"TAF2_INTRONS"	"Biological Process"	"negative regulation of protein refolding"	1.5095202920690638
+"TAF2_INTRONS"	"Biological Process"	"positive regulation of cell fate specification"	1.5095202920690638
+"TAF2_INTRONS"	"Molecular Function"	"DNA-binding transcription factor activity, RNA polymerase II-specific"	1.4147766789977445
+"TAF2_INTRONS"	"Molecular Function"	"cis-regulatory region sequence-specific DNA binding"	1.4003197176234252
+"TAF2_INTRONS"	"Molecular Function"	"peptidoglycan binding"	1.3490648255237674
+"TAF2_INTRONS"	"Molecular Function"	"apolipoprotein A-I binding"	1.3490648255237674
+"TAF2_INTRONS"	"Molecular Function"	"translation release factor activity, codon specific"	1.3490648255237674
+"TAF2_INTRONS"	"Molecular Function"	"laminin receptor activity"	1.3490648255237674
+"TAF2_INTRONS"	"Molecular Function"	"beta-galactosidase activity"	1.3490648255237674
+"TAF2_INTRONS"	"Molecular Function"	"ATP-dependent diacylglycerol kinase activity"	1.3490648255237674
+"TAF2_INTRONS"	"Cellular Component"	"axon initial segment"	1.3380231050274372
+"TAF2_INTRONS"	"Cellular Component"	"endodeoxyribonuclease complex"	1.3380231050274372
+"TAF2_INTRONS"	"Biological Process"	"endoplasmic reticulum tubular network membrane organization"	1.3367953986366372
+"TAF2_INTRONS"	"Biological Process"	"protein unfolding"	1.3367953986366372
+"TAF2_INTRONS"	"Cellular Component"	"sarcoplasm"	1.3298651870480585
+"TAF2_INTRONS"	"Biological Process"	"positive regulation of neural precursor cell proliferation"	1.3070278718178887
+"∆IDR_INTRONS"	"Molecular Function"	"gated channel activity"	8.701297474105713
+"∆IDR_INTRONS"	"Cellular Component"	"transmembrane transporter complex"	5.920805336206758
+"∆IDR_INTRONS"	"Cellular Component"	"cell periphery"	5.47012298406251
+"∆IDR_INTRONS"	"Biological Process"	"transmembrane transport"	4.121703103363139
+"∆IDR_INTRONS"	"Biological Process"	"monoatomic ion transmembrane transport"	3.776437224098813
+"∆IDR_INTRONS"	"Cellular Component"	"plasma membrane protein complex"	3.7166414004038093
+"∆IDR_INTRONS"	"Biological Process"	"forebrain generation of neurons"	3.2528552620833984
+"∆IDR_INTRONS"	"Biological Process"	"forebrain dorsal/ventral pattern formation"	3.2130952965203723
+"∆IDR_INTRONS"	"Biological Process"	"behavior"	3.1976342626781262
+"∆IDR_INTRONS"	"Biological Process"	"regulation of membrane potential"	3.0120414587328153
+"∆IDR_INTRONS"	"Molecular Function"	"inorganic anion transmembrane transporter activity"	2.9834346504277804
+"∆IDR_INTRONS"	"Molecular Function"	"neurotransmitter receptor activity"	2.9764807465923275
+"∆IDR_INTRONS"	"Cellular Component"	"GABA receptor complex"	2.916160980698672
+"∆IDR_INTRONS"	"Biological Process"	"chloride transmembrane transport"	2.914198791162955
+"∆IDR_INTRONS"	"Cellular Component"	"postsynaptic membrane"	2.834084455290403
+"∆IDR_INTRONS"	"Biological Process"	"cellular response to organonitrogen compound"	2.750101968896904
+"∆IDR_INTRONS"	"Molecular Function"	"arrestin family protein binding"	2.7295072431918315
+"∆IDR_INTRONS"	"Biological Process"	"piRNA processing"	2.6984599104843867
+"∆IDR_INTRONS"	"Biological Process"	"cellular response to macrophage colony-stimulating factor stimulus"	2.6984599104843867
+"∆IDR_INTRONS"	"Cellular Component"	"neuron projection membrane"	2.6910423266411354
+"∆IDR_INTRONS"	"Molecular Function"	"phosphatidyl phospholipase B activity"	2.5573836559041427
+"∆IDR_INTRONS"	"Biological Process"	"gamma-aminobutyric acid signaling pathway"	2.526483380794721
+"∆IDR_INTRONS"	"Biological Process"	"interleukin-1 beta production"	2.482955462558695
+"∆IDR_INTRONS"	"Biological Process"	"mineralocorticoid metabolic process"	2.384465426123319
+"∆IDR_INTRONS"	"Molecular Function"	"CARD domain binding"	2.2942392696937572
+"∆IDR_INTRONS"	"Biological Process"	"primary alcohol biosynthetic process"	2.2636321110599233
+"∆IDR_INTRONS"	"Cellular Component"	"germ plasm"	2.2636110824174778
+"∆IDR_INTRONS"	"Biological Process"	"intracellular sodium ion homeostasis"	2.1585883926465366
+"∆IDR_INTRONS"	"Molecular Function"	"metallocarboxypeptidase activity"	2.096089830411222
+"∆IDR_INTRONS"	"Biological Process"	"semaphorin-plexin signaling pathway involved in axon guidance"	2.065774449077645
+"∆IDR_INTRONS"	"Molecular Function"	"cAMP binding"	2.012885647906387
+"∆IDR_INTRONS"	"Cellular Component"	"ciliary base"	2.00918158831251
+"∆IDR_INTRONS"	"Molecular Function"	"lipid binding"	1.9606184418959316
+"∆IDR_INTRONS"	"Biological Process"	"system process"	1.929762839276113
+"∆IDR_INTRONS"	"Biological Process"	"aldehyde biosynthetic process"	1.9076210774778122
+"∆IDR_INTRONS"	"Biological Process"	"negative regulation of chondrocyte differentiation"	1.9076210774778122
+"∆IDR_INTRONS"	"Molecular Function"	"spectrin binding"	1.8690326151340495
+"∆IDR_INTRONS"	"Molecular Function"	"transaminase activity"	1.8690326151340495
+"∆IDR_INTRONS"	"Molecular Function"	"advanced glycation end-product receptor activity"	1.8571482781965203
+"∆IDR_INTRONS"	"Molecular Function"	"adenine/guanine mispair binding"	1.8571482781965203
+"∆IDR_INTRONS"	"Molecular Function"	"glucuronoside transmembrane transporter activity"	1.8571482781965203
+"∆IDR_INTRONS"	"Molecular Function"	"UDP-glucose 4-epimerase activity"	1.8571482781965203
+"∆IDR_INTRONS"	"Molecular Function"	"alkenylglycerophosphoethanolamine hydrolase activity"	1.8571482781965203
+"∆IDR_INTRONS"	"Molecular Function"	"rRNA (uridine-N3-)-methyltransferase activity"	1.8571482781965203
+"∆IDR_INTRONS"	"Molecular Function"	"ceramide floppase activity"	1.8571482781965203
+"∆IDR_INTRONS"	"Molecular Function"	"8-oxo-7,8-dihydroguanine DNA N-glycosylase activity"	1.8571482781965203
+"∆IDR_INTRONS"	"Biological Process"	"positive regulation of low-density lipoprotein particle receptor catabolic process"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"positive regulation of heterotypic cell-cell adhesion"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"desensitization of G protein-coupled receptor signaling pathway by arrestin"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"lateral semicircular canal development"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"negative regulation of telomerase RNA reverse transcriptase activity"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"positive regulation of cell communication by electrical coupling"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"tricuspid valve formation"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"glucuronoside transport"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"ceramide translocation"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"cellular response to Thyroglobulin triiodothyronine"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"larynx development"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"positive regulation of antigen processing and presentation"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"negative regulation of mast cell differentiation"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"lateral ganglionic eminence cell proliferation"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"epinephrine secretion"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"protein branching point deglutamylation"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"positive regulation of transcription from RNA polymerase II promoter by galactose"	1.8414163562342136
+"∆IDR_INTRONS"	"Biological Process"	"olefinic compound biosynthetic process"	1.8391523691428175
+"∆IDR_INTRONS"	"Cellular Component"	"postsynapse"	1.8008578205566814
+"∆IDR_INTRONS"	"Biological Process"	"regulation of receptor-mediated endocytosis"	1.7617727261794138
+"∆IDR_INTRONS"	"Biological Process"	"positive regulation of ERK1 and ERK2 cascade"	1.642252683464731
+"∆IDR_INTRONS"	"Molecular Function"	"histone acetyltransferase binding"	1.5960560798217998
+"∆IDR_INTRONS"	"Biological Process"	"glycerophospholipid catabolic process"	1.566894237195698
+"∆IDR_INTRONS"	"Molecular Function"	"delta14-sterol reductase activity"	1.5591231528225387
+"∆IDR_INTRONS"	"Molecular Function"	"mu-type opioid receptor binding"	1.5591231528225387
+"∆IDR_INTRONS"	"Biological Process"	"cellular response to magnesium ion"	1.5435026655158233
+"∆IDR_INTRONS"	"Biological Process"	"optic nerve morphogenesis"	1.5435026655158233
+"∆IDR_INTRONS"	"Biological Process"	"negative regulation of cGMP-mediated signaling"	1.5435026655158233
+"∆IDR_INTRONS"	"Biological Process"	"positive regulation of acrosome reaction"	1.5435026655158233
+"∆IDR_INTRONS"	"Biological Process"	"cell differentiation involved in salivary gland development"	1.5435026655158233
+"∆IDR_INTRONS"	"Biological Process"	"behavioral response to nicotine"	1.5435026655158233
+"∆IDR_INTRONS"	"Biological Process"	"maintenance of protein location in plasma membrane"	1.5435026655158233
+"∆IDR_INTRONS"	"Biological Process"	"smoothened signaling pathway involved in spinal cord motor neuron cell fate specification"	1.5435026655158233
+"∆IDR_INTRONS"	"Biological Process"	"oligosaccharide transport"	1.5435026655158233
+"∆IDR_INTRONS"	"Cellular Component"	"membrane"	1.5078438238729892
+"∆IDR_INTRONS"	"Biological Process"	"collagen metabolic process"	1.5006372705965598
+"∆IDR_INTRONS"	"Cellular Component"	"heterotrimeric G-protein complex"	1.441513165684511
+"∆IDR_INTRONS"	"Molecular Function"	"extracellular matrix protein binding"	1.3860299975434096
+"∆IDR_INTRONS"	"Molecular Function"	"NAD DNA ADP-ribosyltransferase activity"	1.3860299975434096
+"∆IDR_INTRONS"	"Molecular Function"	"peptidoglycan binding"	1.3860299975434096
+"∆IDR_INTRONS"	"Molecular Function"	"laminin receptor activity"	1.3860299975434096
+"∆IDR_INTRONS"	"Molecular Function"	"ATP-dependent diacylglycerol kinase activity"	1.3860299975434096
+"∆IDR_INTRONS"	"Molecular Function"	"Rho GDP-dissociation inhibitor binding"	1.3860299975434096
+"∆IDR_INTRONS"	"Biological Process"	"cilium movement"	1.370846697392094
+"∆IDR_INTRONS"	"Cellular Component"	"GLI-SUFU complex"	1.3705651023164083
+"∆IDR_INTRONS"	"Cellular Component"	"chromatin lock complex"	1.3705651023164083
+"∆IDR_INTRONS"	"Cellular Component"	"cytoophidium"	1.3705651023164083
+"∆IDR_INTRONS"	"Biological Process"	"endoplasmic reticulum tubular network membrane organization"	1.3705204299976845
+"∆IDR_INTRONS"	"Biological Process"	"acinar cell differentiation"	1.3705204299976845
+"∆IDR_INTRONS"	"Biological Process"	"response to blue light"	1.3705204299976845
+"∆IDR_INTRONS"	"Biological Process"	"positive regulation of monocyte extravasation"	1.3705204299976845
+"∆IDR_INTRONS"	"Biological Process"	"detection of other organism"	1.3705204299976845
+"∆IDR_INTRONS"	"Biological Process"	"DNA repair complex assembly"	1.3705204299976845
+"SRRM2_INTRONS"	"Biological Process"	"synaptic signaling"	3.5910514772632602
+"SRRM2_INTRONS"	"Biological Process"	"antigen receptor-mediated signaling pathway"	3.28153207149971
+"SRRM2_INTRONS"	"Cellular Component"	"ATP-binding cassette (ABC) transporter complex"	3.2618857039546465
+"SRRM2_INTRONS"	"Molecular Function"	"transmembrane signaling receptor activity"	3.2475988187772797
+"SRRM2_INTRONS"	"Biological Process"	"detection of chemical stimulus involved in sensory perception of pain"	3.230275381807276
+"SRRM2_INTRONS"	"Molecular Function"	"gated channel activity"	3.1798768585529493
+"SRRM2_INTRONS"	"Biological Process"	"acylglycerol metabolic process"	3.1417641170949953
+"SRRM2_INTRONS"	"Biological Process"	"iron coordination entity transport"	3.13940818592322
+"SRRM2_INTRONS"	"Biological Process"	"adenylate cyclase-activating adrenergic receptor signaling pathway"	3.13940818592322
+"SRRM2_INTRONS"	"Molecular Function"	"adenyl nucleotide binding"	3.0537289162464476
+"SRRM2_INTRONS"	"Cellular Component"	"RQC complex"	2.7915454495508407
+"SRRM2_INTRONS"	"Cellular Component"	"laminin-11 complex"	2.7915454495508407
+"SRRM2_INTRONS"	"Molecular Function"	"ATP-dependent polydeoxyribonucleotide 5'-hydroxyl-kinase activity"	2.7884507663803935
+"SRRM2_INTRONS"	"Biological Process"	"penile erection"	2.76018853926195
+"SRRM2_INTRONS"	"Biological Process"	"G protein-coupled purinergic receptor signaling pathway"	2.76018853926195
+"SRRM2_INTRONS"	"Biological Process"	"response to interleukin-17"	2.693607949531977
+"SRRM2_INTRONS"	"Cellular Component"	"dendrite membrane"	2.621364366119971
+"SRRM2_INTRONS"	"Cellular Component"	"omegasome membrane"	2.4972835411806122
+"SRRM2_INTRONS"	"Molecular Function"	"mismatch base pair DNA N-glycosylase activity"	2.494213155210648
+"SRRM2_INTRONS"	"Biological Process"	"negative regulation of protein ADP-ribosylation"	2.4661790509568986
+"SRRM2_INTRONS"	"Molecular Function"	"anion binding"	2.4318527383964805
+"SRRM2_INTRONS"	"Cellular Component"	"endolysosome membrane"	2.3283257207813617
+"SRRM2_INTRONS"	"Molecular Function"	"purine ribonucleotide binding"	2.3156098428050553
+"SRRM2_INTRONS"	"Biological Process"	"neuromuscular junction development"	2.300055458559805
+"SRRM2_INTRONS"	"Cellular Component"	"cell periphery"	2.294904064843777
+"SRRM2_INTRONS"	"Cellular Component"	"plasma membrane bounded cell projection"	2.268268630241993
+"SRRM2_INTRONS"	"Biological Process"	"regulation of postsynaptic membrane potential"	2.2653350004797153
+"SRRM2_INTRONS"	"Molecular Function"	"small molecule binding"	2.2525561281739717
+"SRRM2_INTRONS"	"Biological Process"	"global gene silencing by mRNA cleavage"	2.2513368524598194
+"SRRM2_INTRONS"	"Cellular Component"	"receptor complex"	2.2510994033294787
+"SRRM2_INTRONS"	"Biological Process"	"cellular response to nerve growth factor stimulus"	2.24612547514734
+"SRRM2_INTRONS"	"Biological Process"	"liver development"	2.208508486283892
+"SRRM2_INTRONS"	"Molecular Function"	"MutSalpha complex binding"	2.109818716064665
+"SRRM2_INTRONS"	"Biological Process"	"regulation of mitochondrial mRNA stability"	2.082238137143876
+"SRRM2_INTRONS"	"Biological Process"	"negative regulation of calcium ion-dependent exocytosis"	2.082238137143876
+"SRRM2_INTRONS"	"Biological Process"	"microglial cell activation"	2.053896008248578
+"SRRM2_INTRONS"	"Biological Process"	"mitochondrial RNA processing"	2.053896008248578
+"SRRM2_INTRONS"	"Biological Process"	"negative regulation of cold-induced thermogenesis"	2.0504641190765134
+"SRRM2_INTRONS"	"Cellular Component"	"plasma membrane protein complex"	2.0231485560168907
+"SRRM2_INTRONS"	"Cellular Component"	"apical plasma membrane"	2.0070010432777825
+"SRRM2_INTRONS"	"Biological Process"	"gland development"	1.9893450107070003
+"SRRM2_INTRONS"	"Biological Process"	"sensory perception of chemical stimulus"	1.9870090526426425
+"SRRM2_INTRONS"	"Molecular Function"	"cAMP response element binding protein binding"	1.9704437729835824
+"SRRM2_INTRONS"	"Molecular Function"	"heme transmembrane transporter activity"	1.9704437729835824
+"SRRM2_INTRONS"	"Biological Process"	"central nervous system development"	1.968206033666772
+"SRRM2_INTRONS"	"Biological Process"	"camera-type eye photoreceptor cell differentiation"	1.9430885869775032
+"SRRM2_INTRONS"	"Biological Process"	"heat generation"	1.9430885869775032
+"SRRM2_INTRONS"	"Molecular Function"	"extracellular matrix structural constituent"	1.9399040748230088
+"SRRM2_INTRONS"	"Cellular Component"	"synaptic cleft"	1.855219061441377
+"SRRM2_INTRONS"	"Cellular Component"	"Fanconi anaemia nuclear complex"	1.855219061441377
+"SRRM2_INTRONS"	"Biological Process"	"cell surface receptor signaling pathway"	1.8526848549335038
+"SRRM2_INTRONS"	"Molecular Function"	"amide transmembrane transporter activity"	1.8469634997568796
+"SRRM2_INTRONS"	"Biological Process"	"induction of positive chemotaxis"	1.8251142271036123
+"SRRM2_INTRONS"	"Biological Process"	"assembly of actomyosin apparatus involved in cytokinesis"	1.8251142271036123
+"SRRM2_INTRONS"	"Biological Process"	"bone remodeling"	1.8048495019139559
+"SRRM2_INTRONS"	"Molecular Function"	"guanyl-nucleotide exchange factor activity"	1.7927670560466515
+"SRRM2_INTRONS"	"Biological Process"	"mitral valve development"	1.7229199753918645
+"SRRM2_INTRONS"	"Biological Process"	"left/right axis specification"	1.7229199753918645
+"SRRM2_INTRONS"	"Biological Process"	"G protein-coupled acetylcholine receptor signaling pathway"	1.7229199753918645
+"SRRM2_INTRONS"	"Biological Process"	"regulation of DNA-directed DNA polymerase activity"	1.7229199753918645
+"SRRM2_INTRONS"	"Biological Process"	"cholesterol transport"	1.712600502308348
+"SRRM2_INTRONS"	"Molecular Function"	"GTPase binding"	1.6625091819149904
+"SRRM2_INTRONS"	"Molecular Function"	"adrenergic receptor binding"	1.659630513929263
+"SRRM2_INTRONS"	"Molecular Function"	"carbon-sulfur lyase activity"	1.659630513929263
+"SRRM2_INTRONS"	"Biological Process"	"regulation of mitotic nuclear division"	1.6551497885913902
+"SRRM2_INTRONS"	"Biological Process"	"developmental growth involved in morphogenesis"	1.6498431457814067
+"SRRM2_INTRONS"	"Biological Process"	"peptide cross-linking"	1.6329459711455725
+"SRRM2_INTRONS"	"Biological Process"	"response to acidic pH"	1.6329459711455725
+"SRRM2_INTRONS"	"Biological Process"	"regulation of pinocytosis"	1.6329459711455725
+"SRRM2_INTRONS"	"Cellular Component"	"USH2 complex"	1.6299982274850406
+"SRRM2_INTRONS"	"Cellular Component"	"growing cell tip"	1.6299982274850406
+"SRRM2_INTRONS"	"Cellular Component"	"perinucleolar chromocenter"	1.6299982274850406
+"SRRM2_INTRONS"	"Cellular Component"	"extrinsic component of phagophore assembly site membrane"	1.6299982274850406
+"SRRM2_INTRONS"	"Molecular Function"	"myosin VI light chain binding"	1.628434546822784
+"SRRM2_INTRONS"	"Molecular Function"	"advanced glycation end-product receptor activity"	1.628434546822784
+"SRRM2_INTRONS"	"Molecular Function"	"glutamine-phenylpyruvate transaminase activity"	1.628434546822784
+"SRRM2_INTRONS"	"Molecular Function"	"2'-deoxyadenosine deaminase activity"	1.628434546822784
+"SRRM2_INTRONS"	"Molecular Function"	"mitochondrial ribosomal large subunit rRNA binding"	1.628434546822784
+"SRRM2_INTRONS"	"Molecular Function"	"SAM domain binding"	1.628434546822784
+"SRRM2_INTRONS"	"Molecular Function"	"alpha-amino-acid esterase activity"	1.628434546822784
+"SRRM2_INTRONS"	"Molecular Function"	"5'-3' DNA/RNA helicase activity"	1.628434546822784
+"SRRM2_INTRONS"	"Molecular Function"	"4-hydroxyphenylpyruvate dioxygenase activity"	1.628434546822784
+"SRRM2_INTRONS"	"Molecular Function"	"tetrahydrofolylpolyglutamate synthase activity"	1.628434546822784
+"SRRM2_INTRONS"	"Molecular Function"	"Ras palmitoyltransferase activity"	1.628434546822784
+"SRRM2_INTRONS"	"Molecular Function"	"adenine/guanine mispair binding"	1.628434546822784
+"SRRM2_INTRONS"	"Molecular Function"	"apolipoprotein A-I receptor activity"	1.628434546822784
+"SRRM2_INTRONS"	"Molecular Function"	"enterobactin transmembrane transporter activity"	1.628434546822784
+"SRRM2_INTRONS"	"Biological Process"	"cell communication"	1.624455246279634
+"SRRM2_INTRONS"	"Cellular Component"	"synapse"	1.6208242215307582
+"SRRM2_INTRONS"	"Molecular Function"	"protein self-association"	1.6169191106697494
+"SRRM2_INTRONS"	"Biological Process"	"protein O-GlcNAcylation via threonine"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"protein sulfhydration"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"positive regulation of heterotypic cell-cell adhesion"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"response to chlorate"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"chromosome passenger complex localization to spindle midzone"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"peptidyl-lysine glutarylation"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"positive regulation of germinal center formation"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"primary palate development"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"intestinal folate absorption"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"regulation of myosin II filament organization"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"xanthine biosynthetic process"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"protein-pyridoxal-5-phosphate linkage"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"vagus nerve development"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"positive regulation of eye pigmentation"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"rod bipolar cell differentiation"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"tetrahydrofolylpolyglutamate biosynthetic process"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"metanephric glomerular basement membrane development"	1.6141939049775635
+"SRRM2_INTRONS"	"Biological Process"	"endothelin production"	1.6141939049775635
+"SRRM2_INTRONS"	"Cellular Component"	"somatodendritic compartment"	1.5604206822955964
+"SRRM2_INTRONS"	"Biological Process"	"cholesterol metabolic process"	1.4935327525950053
+"SRRM2_INTRONS"	"Biological Process"	"mating"	1.480443741935094
+"SRRM2_INTRONS"	"Biological Process"	"endosomal vesicle fusion"	1.480443741935094
+"SRRM2_INTRONS"	"Cellular Component"	"phagocytic cup"	1.4436643701346836
+"SRRM2_INTRONS"	"Biological Process"	"positive regulation of epidermis development"	1.414786160350522
+"SRRM2_INTRONS"	"Biological Process"	"apoptotic process involved in morphogenesis"	1.414786160350522
+"SRRM2_INTRONS"	"Biological Process"	"lung alveolus development"	1.4127949940095523
+"SRRM2_INTRONS"	"Cellular Component"	"ribonucleoprotein granule"	1.4099190803128423
+"SRRM2_INTRONS"	"Biological Process"	"protein tetramerization"	1.378998610822065
+"SRRM2_INTRONS"	"Molecular Function"	"RNA polymerase II general transcription initiation factor activity"	1.3464250501576909
+"SRRM2_INTRONS"	"Cellular Component"	"PCSK9-AnxA2 complex"	1.3340663914001485
+"SRRM2_INTRONS"	"Cellular Component"	"PCSK9-LDLR complex"	1.3340663914001485
+"SRRM2_INTRONS"	"Cellular Component"	"3M complex"	1.3340663914001485
+"SRRM2_INTRONS"	"Cellular Component"	"BLOC-3 complex"	1.3340663914001485
+"SRRM2_INTRONS"	"Cellular Component"	"stereocilia ankle link complex"	1.3340663914001485
+"SRRM2_INTRONS"	"Molecular Function"	"inhibin binding"	1.332521110297725
+"SRRM2_INTRONS"	"Molecular Function"	"purine nucleoside transmembrane transporter activity"	1.332521110297725
+"SRRM2_INTRONS"	"Molecular Function"	"sterol response element binding"	1.332521110297725
+"SRRM2_INTRONS"	"Biological Process"	"establishment of blood-retinal barrier"	1.3184521875241435
+"SRRM2_INTRONS"	"Biological Process"	"response to Gram-positive bacterium"	1.3184521875241435
+"SRRM2_INTRONS"	"Biological Process"	"Norrin signaling pathway"	1.3184521875241435
+"SRRM2_INTRONS"	"Biological Process"	"negative regulation of protein refolding"	1.3184521875241435
+"SRRM2_INTRONS"	"Biological Process"	"positive regulation of MHC class I biosynthetic process"	1.3184521875241435
