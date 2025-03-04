@@ -15,19 +15,27 @@
 .Rhistory
 .Rapp.history
 
-# Old/temp R files
+# Old and temp files
 src/R/*.R
+to_rm/*
+diff_spliced_IDs/*/TMP_*
+diff_spliced_IDs/*/UP_*
+diff_spliced_IDs/*/DOWN_*
 
-## for initial comit, then after clean up add it
+vast_tools/temp_*.tab
+vast_tools/TEST_*.tab
+vast_tools/Test_*.tab
+vast_tools/Control_*.tab
+vast_tools/TAF2_*.tab
+vast_tools/diff_*.tab
 
-# vast_out
-vast_tools/vast_out/*.tab
-vast_tools/vast_out/diff_*/min_dPSI*
-vast_tools/vast_out/compare_*/min_dPSI*
-vast_tools/vast_out/tidy_*/INCLUSION_LEVELS_TIDY*
-
-# vast_tools
-vast_tools/*.tab
+## Files I'd like to comit but are above the 100Mb limit
+vast_tools/vast_out/INCLUSION_LEVELS_FULL*tab
+vast_tools/vast_out/compare_2023_08_01/min_dPSI*/CS-HeLa*
+vast_tools/vast_out/compare_2024_03_26/min_dPSI*/CS-HeLa*
+vast_tools/vast_out/compare_2024_03_26/min_dPSI*/CR-HeLa*
+vast_tools/vast_out/compare_2024_03_26/min_dPSI*/CS-HepG2*
+vast_tools/vast_out/compare_2024_03_26/min_dPSI*/CR-HepG2*
 
 ## Never commit 
 # vast-tools intermediate files
@@ -38,37 +46,30 @@ vast_tools/vast_out/to_combine/*
 vast_tools/vast_out/expr_out/*
 vast_tools/vast_out/raw_incl/*
 vast_tools/vast_out/raw_reads/*
+vast_tools/vast_out/TPM-hg38*.tab
+vast_tools/vast_out/cRPKM-hg38*.tab
 
-# matt intermediate files
+# Comit only the BG genes of TAF2s and SRRM2KD in HeLa
+vast_tools/vast_out/compare_2023_08_01/min_dPSI*/GO_gene_lists/*/A*txt
+vast_tools/vast_out/compare_2023_08_01/min_dPSI*/GO_gene_lists/*/IR*txt
+
+vast_tools/vast_out/compare_2024_03_26/min_dPSI*/GO_gene_lists/*/A*txt
+vast_tools/vast_out/compare_2024_03_26/min_dPSI*/GO_gene_lists/*/IR*txt
+vast_tools/vast_out/compare_2024_03_26/min_dPSI*/HeLa_SON*
+vast_tools/vast_out/compare_2024_03_26/min_dPSI*/AS_NC-HeLa_SONKD_vs_CNTRL_uniq_noB3_pIR-Max_dPSI5.tab
+vast_tools/vast_out/compare_2024_03_26/min_dPSI*/GO_gene_lists/HeLa_SON*
+vast_tools/vast_out/compare_2024_03_26/min_dPSI*/GO_gene_lists/HepG2_SRRM2KD*
+vast_tools/vast_out/compare_2024_03_26/min_dPSI*/*-HeLa_SON_*.tab
+
+# matt log files
 your_requests_to_matt.txt
-vast_tools/matt_*/*.tex
-vast_tools/matt_*/*.log
-vast_tools/matt_*/*.out
-vast_tools/matt_*/*.cls
-vast_tools/matt_*/*.aux
-vast_tools/matt_*/*.toc
-vast_tools/matt_*/*.sty
-vast_tools/matt_*/summary_graphics/*
 
 # matt files
-diff_spliced_IDs/[1-6]_*tab
-
-diff_spliced_IDs/EXONS_FEATURES/*.tex
-diff_spliced_IDs/EXONS_FEATURES/*.log
-diff_spliced_IDs/EXONS_FEATURES/*.out
-diff_spliced_IDs/EXONS_FEATURES/*.cls
-diff_spliced_IDs/EXONS_FEATURES/*.aux
-diff_spliced_IDs/EXONS_FEATURES/*.toc
-diff_spliced_IDs/EXONS_FEATURES/*.sty
-diff_spliced_IDs/EXONS_FEATURES/summary_graphics/*
-
-diff_spliced_IDs/INTRONS_FEATURES/*.tex
-diff_spliced_IDs/INTRONS_FEATURES/*.log
-diff_spliced_IDs/INTRONS_FEATURES/*.out
-diff_spliced_IDs/INTRONS_FEATURES/*.cls
-diff_spliced_IDs/INTRONS_FEATURES/*.aux
-diff_spliced_IDs/INTRONS_FEATURES/*.toc
-diff_spliced_IDs/INTRONS_FEATURES/*.sty
-diff_spliced_IDs/INTRONS_FEATURES/summary_graphics/*
-
-Matt_Analysis_first.md
+diff_spliced_IDs/*/*/*.tex
+diff_spliced_IDs/*/*/*.log
+diff_spliced_IDs/*/*/*.out
+diff_spliced_IDs/*/*/*.cls
+diff_spliced_IDs/*/*/*.aux
+diff_spliced_IDs/*/*/*.toc
+diff_spliced_IDs/*/*/*.sty
+diff_spliced_IDs/*/*/summary_graphics/*
