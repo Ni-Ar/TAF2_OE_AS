@@ -1,0 +1,1643 @@
+---
+title: "Integration TAF2s-OEs and SRRM2-KDs"
+subtitle: "Alternative splicing analysis"
+author: "Niccolò Arecco"
+toc: true
+number-sections: true
+highlight-style: pygments
+format:
+  html:
+    embed-resources: true
+    code-fold: true
+    code-copy: true
+    theme:
+      light: flatly
+      dark: darkly
+editor: source
+bibliography: AS_references.bib
+---
+
+# Intro
+
+This report contains the code used to produce the panels of figure 6 of the paper including the re-analysis of the for SRRM2 Knockdown (KD) RNA-seq in HeLa[@Zhang2024] (Bo Wang lab) and HepG2[@Cui2023] (Ben Blewncowe, Alan Lambowitz & Paul Schimmel) cells.
+
+# Set Up
+
+Last code execution: `r format(Sys.time(), '%Y %B %d, %A @ %H:%m:%S')`.
+
+## Packages
+
+Load packages required for the analysis and suppress any message. Check the @sec-sessioninfo section at the end for package versions.
+
+```{r, Loading required packages, warning = FALSE, message = FALSE}
+suppressPackageStartupMessages( library(dplyr, warn.conflicts = F, quietly = T))
+library(readr)
+library(tidyr)
+library(ggplot2)
+library(ggforce)
+library(patchwork)
+
+suppressPackageStartupMessages( library(rstatix, quietly = TRUE) )
+suppressPackageStartupMessages(library(GOfuncR))
+suppressPackageStartupMessages(library(DMRichR, quietly = TRUE))
+suppressPackageStartupMessages(library(org.Hs.eg.db, quietly = TRUE))
+library(ggVennDiagram)
+```
+
+In addition I developed an `R` package called `niar` to stream line some of the common analysis steps. It can be installed from [my GitHub repository](https://github.com/Ni-Ar/niar) using:
+
+```{r, install niar package, eval = FALSE, message = FALSE, warning = FALSE}
+devtools::install_github("Ni-Ar/niar")
+library(niar)
+```
+
+```{r, load niar package, message = FALSE, warning = FALSE, echo = FALSE}
+local <- TRUE
+if(local) {
+    devtools::load_all(path = '~/mnt/narecco/software/R/niar')
+} else if (local == FALSE) {
+     devtools::load_all(path = '~/software/R/niar')
+} else {
+  stop('local is not a Logical')
+}
+```
+
+## Functions
+
+This section contains custom-made functions used in this analysis.
+
+Define the style of the bar plots.
+
+```{r, label = "ggplot bars themes"}
+thm_bar <- theme_classic(base_family = 'Arial', base_size = 6) +
+  theme(axis.title.y = element_blank(),
+        axis.ticks.y = element_blank(), 
+        axis.text = element_text(colour = 'black'),
+        axis.ticks.length = unit(1, 'mm'),
+        
+        legend.key.size = unit(1, 'mm'),
+        legend.key.height = unit(1, 'mm'),
+        legend.key.width = unit(1, 'mm'),
+        legend.margin = margin(0, 0, 0, 0),
+        legend.spacing = unit(0, "cm"),
+        legend.position = 'inside',
+        legend.position.inside = c(0.95, 0.18),
+        legend.title = element_blank(),
+        
+        plot.background = element_blank(),
+        
+        strip.background = element_blank(),
+        
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = 'black', fill = 'NA', linewidth = 0.2),
+        panel.spacing.x = unit(3, 'mm')
+        )
+```
+
+Define the style of the scatter plots
+```{r, label = "ggplot scatter themes", eval = T}
+thm_scatter <- theme_classic(base_family = 'Arial', base_size = 7) +
+  theme(axis.text = element_text(colour = 'black'),
+        axis.line = element_line(colour = 'black', linewidth = 0.2),
+        axis.ticks.length = unit(1, 'mm'),
+        
+        panel.grid.major = element_line(linewidth = 0.1),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        
+        legend.key.size = unit(1, 'mm'),
+        legend.key.height = unit(1, 'mm'),
+        legend.key.width = unit(1, 'mm'),
+        legend.margin = margin(0, 0, 0, 0),
+        legend.spacing = unit(0, "cm"),
+        
+        plot.background = element_blank())
+```
+
+Helper functions for the GO terms analysis.
+
+```{r, funtions used in this analysis to run the GO terms}
+run_GOfuncR_slim <- function(input_df) {
+  
+  res_hyper <- GOfuncR::go_enrich(input_df, n_randset = 100, silent = T, orgDb = 'org.Hs.eg.db')
+  res_silm <- DMRichR::slimGO(GO = res_hyper, tool = 'GOfuncR', annoDb = org.Hs.eg.db )
+  
+  return(list(res_hyper, res_silm))
+}
+```
+
+Helper function for MATT post-processing
+```{r, MATT helper function}
+process_exon_feats <- function(data) {
+  
+  LEN_feats <- c('UPEXON_MEDIANLENGTH', 'UPINTRON_MEDIANLENGTH', 'EXON_LENGTH', 'DOINTRON_MEDIANLENGTH', 'DOEXON_MEDIANLENGTH')
+  RATIO_LEN_feats <- c('RATIO_UPEXON_EXON_LENGTH', 'RATIO_UPINTRON_EXON_LENGTH', 'RATIO_DOINTRON_EXON_LENGTH', 'RATIO_DOEXON_EXON_LENGTH')
+  GCC_feats <- c('UPEXON_GCC', 'UPINTRON_GCC', 'EXON_GCC', 'DOINTRON_GCC', 'DOEXON_GCC')
+  RATIO_GCC_feats <- c("RATIO_UPEXON_EXON_GCC", "RATIO_UPINTRON_EXON_GCC", "RATIO_DOINTRON_EXON_GCC", "RATIO_DOEXON_EXON_GCC")
+  
+  BPS_feats <- c('NUM_PREDICTED_BPS_UPINTRON', 'NUM_PREDICTED_BPS_DOINTRON', 
+                 'BPSCORE_MAXBP_UPINTRON', 'BPSCORE_MAXBP_DOINTRON', 
+                 'MEDIAN_BPSCORE_UPINTRON', 'MEDIAN_BPSCORE_DOINTRON',
+                 'MEDIAN_SCORE_FOR_BPSEQ_UPINTRON', 'MEDIAN_SCORE_FOR_BPSEQ_DOINTRON', 
+                 'SF1_HIGHESTSCORE_3SS_UPINTRON', 'SF1_HIGHESTSCORE_3SS_DOINTRON')
+  
+  PYT_feats <- c('MEDIAN_POLYPYRITRAC_OFFSET_UPINTRON', 'MEDIAN_POLYPYRITRAC_LEN_UPINTRON', 'MEDIAN_POLYPYRITRAC_SCORE_UPINTRON',
+                 'MEDIAN_POLYPYRITRAC_OFFSET_DOINTRON', 'MEDIAN_POLYPYRITRAC_LEN_DOINTRON', 'MEDIAN_POLYPYRITRAC_SCORE_DOINTRON')
+  
+  MAX_ENT_SCR_feats <- c('MAXENTSCR_HSAMODEL_UPSTRM_5SS', 'MAXENTSCR_HSAMODEL_3SS', 
+                         'MAXENTSCR_HSAMODEL_5SS', 'MAXENTSCR_HSAMODEL_DOWNSTRM_3SS')
+  
+  NUM_feats <- c('MEDIAN_EXON_NUMBER', 'EXON_MEDIANRANK', 'EXON_MEDIANRELATIVERANK',
+                 'EXON_MEDIANRELATIVERANK_3BINS', 'EXON_MEDIANRELATIVERANK_5BINS',
+                 'EXON_MEDIANRELATIVERANK_10BINS')
+  
+  
+  ex_feats <- c(LEN_feats, RATIO_LEN_feats, GCC_feats, RATIO_GCC_feats, 
+                BPS_feats, PYT_feats, MAX_ENT_SCR_feats, NUM_feats)
+  
+  col_to_sel <- c('GROUP', 'EVENT', ex_feats)
+  
+  data |>
+    dplyr::select( all_of(col_to_sel) ) |>
+    pivot_longer(cols = ex_feats, names_to = 'EX_FEAT', values_to = 'VALUE') |>
+    mutate(EX_FEAT = factor(EX_FEAT, levels = ex_feats) ) |>
+    mutate( VALUE = case_when(EX_FEAT %in% c(LEN_feats, RATIO_LEN_feats) ~ log10(VALUE+1), 
+                              !EX_FEAT %in% c(LEN_feats, RATIO_LEN_feats) ~ VALUE ) ) |>
+    mutate(LOCATION = EX_FEAT ) |>
+    mutate(LOCATION = gsub('_MEDIANLENGTH', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('NUM_PREDICTED_BPS_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('BPSCORE_MAXBP_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('MEDIAN_BPSCORE_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('MEDIAN_SCORE_FOR_BPSEQ_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('SF1_HIGHESTSCORE_3SS_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('MEDIAN_POLYPYRITRAC_OFFSET_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('MEDIAN_POLYPYRITRAC_LEN_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('MEDIAN_POLYPYRITRAC_SCORE_', '', LOCATION) ) |>
+    
+    mutate(LOCATION = gsub('MEDIAN_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('_NUMBER', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('_MEDIANRANK', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('_MEDIANRELATIVERANK.*$', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('_LENGTH', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('_EXON', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('_GCC', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('RATIO_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('_HSAMODEL', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('MAXENTSCR_UPSTRM_5SS', 'UPINTRON_5SS', LOCATION) ) |>
+    mutate(LOCATION = gsub('MAXENTSCR_DOWNSTRM_3SS', 'DOINTRON_3SS', LOCATION) ) |>
+    mutate(LOCATION = gsub('MAXENTSCR_3SS', 'EXON_3SS', LOCATION) ) |>
+    mutate(LOCATION = gsub('MAXENTSCR_5SS', 'EXON_5SS', LOCATION) ) -> proc_data
+  
+  pretty_order <- unique(proc_data$LOCATION)
+  
+  tidy_data <- proc_data |>
+    # calculate a delta mean
+    group_by(EX_FEAT) |>
+    summarise(MEAN_FEAT_ASNC = mean(VALUE[GROUP %in% 'AS_NC'], na.rm = T),
+              MEAN_FEAT_CS = mean(VALUE[GROUP %in% 'CS'], na.rm = T),
+              SD_FEAT_ASNC = sd(VALUE[GROUP %in% 'AS_NC'], na.rm = T),
+              SD_FEAT_CS = sd(VALUE[GROUP %in% 'CS'], na.rm = T) ) |>
+    left_join(x = proc_data, by = join_by(EX_FEAT) ) |>
+    mutate(dF_ASNC = VALUE - MEAN_FEAT_ASNC,
+           dF_CS = VALUE - MEAN_FEAT_CS ) |>
+    mutate(zF_ASNC = dF_ASNC / SD_FEAT_ASNC,
+           zF_CS = dF_CS / SD_FEAT_CS ) |>
+    mutate(CATEGORY = case_when(EX_FEAT %in% LEN_feats ~ 'Length',
+                                EX_FEAT %in% RATIO_LEN_feats ~ 'Ratio to Exon Length',
+                                EX_FEAT %in% GCC_feats ~ 'GC %',
+                                EX_FEAT %in% RATIO_GCC_feats ~ 'Ratio to Exon GC %',
+                                EX_FEAT %in% BPS_feats ~ 'Branch Point',
+                                EX_FEAT %in% PYT_feats ~ 'Poly Y Track',
+                                EX_FEAT %in% NUM_feats ~ 'Rel. Position',
+                                EX_FEAT %in% MAX_ENT_SCR_feats ~ 'S.S. Score')
+    ) |>
+    mutate(CATEGORY = factor(CATEGORY, 
+                             levels = c('Length', 'Ratio to Exon Length', 'GC %',
+                                        'Ratio to Exon GC %', 'Branch Point', 
+                                        'Poly Y Track','S.S. Score', 'Rel. Position') ) ) |>
+    mutate(LOCATION = factor(LOCATION, levels = pretty_order ) ) |>
+    relocate(CATEGORY, .after = EVENT) |>
+    relocate(LOCATION, .after = EX_FEAT) 
+
+  return(tidy_data)
+}
+```
+
+This is basically the function as above, but without the `pivot_longer` and a `relocate`.
+
+```{r, stat helper function}
+process_exon_feats_test <- function(data) {
+  
+  LEN_feats <- c('UPEXON_MEDIANLENGTH', 'UPINTRON_MEDIANLENGTH', 'EXON_LENGTH', 'DOINTRON_MEDIANLENGTH', 'DOEXON_MEDIANLENGTH')
+  RATIO_LEN_feats <- c('RATIO_UPEXON_EXON_LENGTH', 'RATIO_UPINTRON_EXON_LENGTH', 'RATIO_DOINTRON_EXON_LENGTH', 'RATIO_DOEXON_EXON_LENGTH')
+  GCC_feats <- c('UPEXON_GCC', 'UPINTRON_GCC', 'EXON_GCC', 'DOINTRON_GCC', 'DOEXON_GCC')
+  RATIO_GCC_feats <- c("RATIO_UPEXON_EXON_GCC", "RATIO_UPINTRON_EXON_GCC", "RATIO_DOINTRON_EXON_GCC", "RATIO_DOEXON_EXON_GCC")
+  
+  BPS_feats <- c('NUM_PREDICTED_BPS_UPINTRON', 'NUM_PREDICTED_BPS_DOINTRON', 
+                 'BPSCORE_MAXBP_UPINTRON', 'BPSCORE_MAXBP_DOINTRON', 
+                 'MEDIAN_BPSCORE_UPINTRON', 'MEDIAN_BPSCORE_DOINTRON',
+                 'MEDIAN_SCORE_FOR_BPSEQ_UPINTRON', 'MEDIAN_SCORE_FOR_BPSEQ_DOINTRON', 
+                 'SF1_HIGHESTSCORE_3SS_UPINTRON', 'SF1_HIGHESTSCORE_3SS_DOINTRON')
+  
+  PYT_feats <- c('MEDIAN_POLYPYRITRAC_OFFSET_UPINTRON', 'MEDIAN_POLYPYRITRAC_LEN_UPINTRON', 'MEDIAN_POLYPYRITRAC_SCORE_UPINTRON',
+                 'MEDIAN_POLYPYRITRAC_OFFSET_DOINTRON', 'MEDIAN_POLYPYRITRAC_LEN_DOINTRON', 'MEDIAN_POLYPYRITRAC_SCORE_DOINTRON')
+  
+  MAX_ENT_SCR_feats <- c('MAXENTSCR_HSAMODEL_UPSTRM_5SS', 'MAXENTSCR_HSAMODEL_3SS', 
+                         'MAXENTSCR_HSAMODEL_5SS', 'MAXENTSCR_HSAMODEL_DOWNSTRM_3SS')
+  
+  NUM_feats <- c('MEDIAN_EXON_NUMBER', 'EXON_MEDIANRANK', 'EXON_MEDIANRELATIVERANK',
+                 'EXON_MEDIANRELATIVERANK_3BINS', 'EXON_MEDIANRELATIVERANK_5BINS',
+                 'EXON_MEDIANRELATIVERANK_10BINS')
+  
+  
+  ex_feats <- c(LEN_feats, RATIO_LEN_feats, GCC_feats, RATIO_GCC_feats, 
+                BPS_feats, PYT_feats, MAX_ENT_SCR_feats, NUM_feats)
+  
+  data |>
+    mutate(EX_FEAT = factor(EX_FEAT, levels = ex_feats) ) |>
+    mutate(LOCATION = EX_FEAT ) |>
+    mutate(LOCATION = gsub('_MEDIANLENGTH', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('NUM_PREDICTED_BPS_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('BPSCORE_MAXBP_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('MEDIAN_BPSCORE_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('MEDIAN_SCORE_FOR_BPSEQ_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('SF1_HIGHESTSCORE_3SS_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('MEDIAN_POLYPYRITRAC_OFFSET_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('MEDIAN_POLYPYRITRAC_LEN_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('MEDIAN_POLYPYRITRAC_SCORE_', '', LOCATION) ) |>
+    
+    mutate(LOCATION = gsub('MEDIAN_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('_NUMBER', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('_MEDIANRANK', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('_MEDIANRELATIVERANK.*$', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('_LENGTH', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('_EXON', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('_GCC', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('RATIO_', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('_HSAMODEL', '', LOCATION) ) |>
+    mutate(LOCATION = gsub('MAXENTSCR_UPSTRM_5SS', 'UPINTRON_5SS', LOCATION) ) |>
+    mutate(LOCATION = gsub('MAXENTSCR_DOWNSTRM_3SS', 'DOINTRON_3SS', LOCATION) ) |>
+    mutate(LOCATION = gsub('MAXENTSCR_3SS', 'EXON_3SS', LOCATION) ) |>
+    mutate(LOCATION = gsub('MAXENTSCR_5SS', 'EXON_5SS', LOCATION) ) -> proc_data
+  
+  pretty_order <- unique(proc_data$LOCATION)
+  
+  tidy_data <- proc_data |>
+    mutate(CATEGORY = case_when(EX_FEAT %in% LEN_feats ~ 'Length',
+                                EX_FEAT %in% RATIO_LEN_feats ~ 'Ratio to Exon Length',
+                                EX_FEAT %in% GCC_feats ~ 'GC %',
+                                EX_FEAT %in% RATIO_GCC_feats ~ 'Ratio to Exon GC %',
+                                EX_FEAT %in% BPS_feats ~ 'Branch Point',
+                                EX_FEAT %in% PYT_feats ~ 'Poly Y Track',
+                                EX_FEAT %in% NUM_feats ~ 'Rel. Position',
+                                EX_FEAT %in% MAX_ENT_SCR_feats ~ 'S.S. Score')
+    ) |>
+    mutate(CATEGORY = factor(CATEGORY, 
+                             levels = c('Length', 'Ratio to Exon Length', 'GC %',
+                                        'Ratio to Exon GC %', 'Branch Point', 
+                                        'Poly Y Track','S.S. Score', 'Rel. Position') ) ) |>
+    mutate(LOCATION = factor(LOCATION, levels = pretty_order ) ) |>
+    relocate(LOCATION, .after = EX_FEAT) 
+
+  return(tidy_data)
+}
+```
+
+## Directories & File Paths
+
+Here I organised all the file and directories paths I need to run the analysis and define where to save the processed tables and figures.
+
+```{r, set paths and dicretories on cluster, warning = FALSE, message = FALSE}
+if (local) {
+    proj_dir <- file.path('~/mnt/narecco/projects/01_ALTdemix')
+} else if (local == FALSE) {
+    proj_dir <- file.path('~/projects/01_ALTdemix')
+} else {
+    stop('local is not a Logical')
+}
+
+expr_dir <- file.path(proj_dir, 'data/INCLUSION_tbl/Tanja')
+vast_tools_dir <- file.path(expr_dir, 'vast_tools')
+vast_out <- file.path(expr_dir, 'vast_tools/vast_out')
+
+psi_path <- file.path(vast_out, 'INCLUSION_LEVELS_FULL-hg38-12-v251.tab')
+expr_path <- file.path(vast_out, 'TPM-hg38-12-NORM.tab')
+```
+
+Path to the differentially spliced event, I identified.
+
+```{r, path the DSE tables}
+dse_dir_TAF2 <- file.path(expr_dir, 'diff_spliced_IDs/TAF2-OE')
+dse_path_TAF2 <- file.path(dse_dir_TAF2, '0_HeLa_TAF2_Supplemtentary_Table_DSE_SHARED_UNIQUE.tab')
+
+dse_dir_SRRM2 <- file.path(expr_dir, 'diff_spliced_IDs/SRRM2-KD')
+dse_path_SRRM2_HeLa <- file.path(dse_dir_SRRM2, '0_HeLa_Supplemtentary_Table_DSE_SHARED_UNIQUE.tab')
+dse_path_SRRM2_HepG2 <- file.path(dse_dir_SRRM2, '0_HepG2_Supplemtentary_Table_DSE_SHARED_UNIQUE.tab')
+```
+
+```{r, path background genes}
+cmpr_TAF2dIDR_BG_dir <- file.path(vast_out, 'compare_2023_08_01/min_dPSI15_min_range0_max_dPSI5/GO_gene_lists')
+BG_IDs_path <- file.path(cmpr_TAF2dIDR_BG_dir, 'HeLa_NLSTAF2dIDR_vs_CNTRL_mrgd_noB3_pIR/BG-HeLa_NLSTAF2dIDR_vs_CNTRL_mrgd_noB3_pIR.txt')
+```
+
+Paths to MATT outputs
+```{r, path to matt controls}
+TAF2_MATT_CNTLR_EXONS_path <- file.path(vast_tools_dir, 'CONTROL_EXONS_AS_CR_CS.tab')
+TAF2_MATT_CNTLR_INTRONS_path <- file.path(vast_tools_dir, 'CONTROL_INTRONS_AS_CR_CS.tab')
+
+SRRM2_MATT_CNTRLS_EXONS_path <- file.path(vast_tools_dir, 'CONTROL_EXONS_SRRM2-KD_AS_CR_CS.tab')
+SRRM2_MATT_CNTRLS_INTRONS_path <- file.path(vast_tools_dir, 'CONTROL_INTRONS_SRRM2-KD_AS_CR_CS.tab')
+```
+
+Paths to MATT output.
+```{r, MATT output file paths}
+# TAF2
+exon_feat_dir_TAF2 <- file.path(dse_dir_TAF2, 'EXONS_FEATURES_HeLa')
+intron_feat_dir_TAF2 <- file.path(dse_dir_TAF2, 'INTRONS_FEATURES_HeLa')
+exon_feat_path_TAF2 <- file.path(exon_feat_dir_TAF2, 'MATT_OUTPUT_EXONS_TAF2_HeLa_with_efeatures_NOSEQ.tab')
+intron_feat_path_TAF2 <- file.path(intron_feat_dir_TAF2, 'MATT_OUTPUT_INTRONS_TAF2_HeLa_with_ifeatures_NOSEQ.tab')
+
+# SRRM2
+exon_feat_dir_SRRM2 <- file.path(dse_dir_SRRM2, 'EXONS_FEATURES_HeLa')
+intron_feat_dir_SRRM2 <- file.path(dse_dir_SRRM2, 'INTRONS_FEATURES_HeLa')
+exon_feat_path_SRRM2 <- file.path(exon_feat_dir_SRRM2, 'MATT_OUTPUT_EXONS_SRRM2_HeLa_with_efeatures_NOSEQ.tab')
+intron_feat_path_SRRM2 <- file.path(intron_feat_dir_SRRM2, 'MATT_OUTPUT_EXONS_SRRM2_HeLa_with_efeatures_NOSEQ.tab')
+```
+
+I save the pdfs locally on my CRG OneDrive to have move them into Illustrator.
+
+```{r, set paths and directories on the cluster, warning = FALSE, message = FALSE}
+plot_dir <- file.path(expr_dir, 'plots/MAIN')
+dse_dir_Integration <- file.path(expr_dir, 'diff_spliced_IDs/MAIN')
+
+tbl_dir_fig <- dse_dir_Integration
+pdf_dir_fig <- plot_dir
+
+if (!dir.exists(pdf_dir_fig)) { dir.create(pdf_dir_fig, recursive = T) }
+if (!dir.exists(tbl_dir_fig)) { dir.create(tbl_dir_fig, recursive = T) }
+```
+
+## Parameters
+
+Set the ∆PSI threshold, the ∆PSI "squish" threshold in the correlation scatter plots.
+
+```{r, set thresholds}
+dPSI_squish <- 40
+dPSI_thshld <- 15
+```
+
+::: {.callout-note}
+In some plots the points higher than |∆PSI| > `r dPSI_squish` are squished and plotted at that value. This helps showing all points on the plot and keeps the data less dispersed. 
+:::
+
+Here I report the analysis code to reproduce the findings in figure 6.
+
+# Number of DSE
+
+To display the number of differentially spliced events (DSE) I read the files I wrote in the previous analysis reports, integrating 3 different methods, and plot them as bar plots. This file contains all the shared and uniquely differentially spliced events between TAF2 and NLS-∆IDR-TAF2.
+
+```{r, import TAF2 events}
+DSE_TAF2 <- read_delim(file = dse_path_TAF2, delim = '\t', col_names = T, show_col_types = F)
+  
+num_DSE_TAF2 <- DSE_TAF2 |>
+  select(EXPERIMENT, EVENT, AS_TYPE, DIRECTION) |>
+  unique() |>
+  group_by(EXPERIMENT,  AS_TYPE, DIRECTION) |>
+  summarise(Num_DSE = n(), .groups = 'keep') |>
+  mutate(AS_TYPE = str_replace(pattern = 'Acceptor', replacement = "3' ss", AS_TYPE)) |>
+  mutate(AS_TYPE = str_replace(pattern = 'Donor', replacement = "5' ss", AS_TYPE)) |>
+  mutate(CELL_TYPE = 'HeLa')
+
+# add fake data so that the bars in the plot have all the same width
+filler_data <- data.frame(EXPERIMENT = rep(c('TAF2', 'TAF2∆IDR'), 2), 
+                          AS_TYPE = c( rep("Alt. 3' ss", 2), rep("Alt. 5' ss", 2) ), 
+                          CELL_TYPE = 'HeLa',
+                          DIRECTION = 'DOWN', Num_DSE = -1)
+  
+num_DSE_TAF2 <- rbind(num_DSE_TAF2, filler_data)
+```
+
+Import SRRM2 Knockdown events in HeLa cells.
+
+```{r, import SRRM2 HeLa events}
+DSE_SRRM2 <- read_delim(file = dse_path_SRRM2_HeLa,
+                        delim = '\t', col_names = T, show_col_types = F)
+
+num_DSE_SRRM2_HeLa <- DSE_SRRM2 |>
+  select(EXPERIMENT, EVENT, AS_TYPE, DIRECTION) |>
+  unique() |>
+  group_by(EXPERIMENT,  AS_TYPE, DIRECTION) |>
+  summarise(Num_DSE = n(), .groups = 'keep') |>
+  mutate(EXPERIMENT = str_remove(pattern = "^HeLa-", EXPERIMENT)) |>
+  mutate(AS_TYPE = str_replace(pattern = 'Acceptor', replacement = "3' ss", AS_TYPE)) |>
+  mutate(AS_TYPE = str_replace(pattern = 'Donor', replacement = "5' ss", AS_TYPE)) |>
+  mutate(CELL_TYPE = 'HeLa')
+
+# add fake data so that the bars in the plot have all the same width
+filler_data <- data.frame(EXPERIMENT = rep(c('SRRM2-KD'), 2), 
+                          AS_TYPE = c( rep("Alt. 3' ss", 2), rep("Alt. 5' ss", 2) ), 
+                          CELL_TYPE = 'HeLa',
+                          DIRECTION = 'DOWN', Num_DSE = -1)
+  
+num_DSE_SRRM2_HeLa <- rbind(num_DSE_SRRM2_HeLa, filler_data) 
+```
+
+For completeness I also import the differentially spliced events upon SRRM2 KD in HepG2.
+
+```{r, import SRRM2 HepG2 events}
+DSE_SRRM2_HepG2 <- read_delim(file = dse_path_SRRM2_HepG2,
+                        delim = '\t', col_names = T, show_col_types = F)
+
+num_DSE_SRRM2_HepG2 <- DSE_SRRM2_HepG2 |>
+  select(EXPERIMENT, EVENT, AS_TYPE, DIRECTION) |>
+  unique() |>
+  group_by(EXPERIMENT, AS_TYPE, DIRECTION) |>
+  summarise(Num_DSE = n(), .groups = 'keep') |>
+  mutate(EXPERIMENT = str_remove(pattern = "^HepG2-", EXPERIMENT)) |>
+  mutate(AS_TYPE = str_replace(pattern = 'Acceptor', replacement = "3' ss", AS_TYPE)) |>
+  mutate(AS_TYPE = str_replace(pattern = 'Donor', replacement = "5' ss", AS_TYPE)) |>
+  mutate(CELL_TYPE = 'HepG2')
+
+# add fake data so that the bars in the plot have all the same width
+filler_data <- data.frame(EXPERIMENT = rep(c('SRRM2-KD'), 2), 
+                          AS_TYPE = c( rep("Alt. 3' ss", 2), rep("Alt. 5' ss", 2) ), 
+                          CELL_TYPE = 'HepG2',
+                          DIRECTION = 'DOWN', Num_DSE = -1)
+  
+num_DSE_SRRM2_HepG2 <- rbind(num_DSE_SRRM2_HepG2, filler_data) 
+```
+
+Combine all the data into one data frame.
+```{r, combine and factorise for plot}
+Summary_events_HeLa <- rbind(num_DSE_TAF2, num_DSE_SRRM2_HeLa) |>
+  mutate(EXPERIMENT = factor(EXPERIMENT, levels = c("TAF2", "TAF2∆IDR", "SRRM2-KD"))) |>
+  mutate(AS_TYPE = factor(AS_TYPE, levels = rev(c("Exon", "Intron", "Alt. 3' ss", "Alt. 5' ss" ))))
+```
+
+Plot the numbers with bars. **Figure 6C**
+
+```{r, plot number of DSE, warning = FALSE, fig.width = 8, fig.height = 4}
+ggplot(Summary_events_HeLa) +
+  aes( x = Num_DSE, y = AS_TYPE, fill = DIRECTION) +
+  facet_wrap( ~EXPERIMENT, nrow = 1) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6, linewidth = 0.2 ) +
+  geom_text(aes(label = Num_DSE), position = position_dodge(width = 0.7), hjust = 1.05, colour = 'white', size = 1 ) + 
+  scale_fill_manual(values = c('UP' = 'firebrick2', 'DOWN' = 'dodgerblue2', 'BOTH' = 'purple4') ) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.05), add = 0), 
+                     breaks = c(0, 150, 300, 450),
+                     limits = c(0, NA)) +
+  scale_y_discrete(expand = expansion(mult = 0.05, add = 0) ) +
+  labs(x = 'Number of AS events') +
+  thm_bar
+```
+
+Save to pdf.
+
+```{r, Save Figure 6C, warning = FALSE}
+ggsave(filename = paste0('Fig_6C_Num_SHARED_UNIQUELY_DSE_dPSI', dPSI_thshld, '_Bar.pdf'), plot = last_plot(), 
+       device = cairo_pdf, path = pdf_dir_fig, units = 'cm', width = 7,
+       height = 4.0)
+```
+
+Also plot the data with the HepG2 SRRM2 KD
+
+Combine all the data into one data frame.
+```{r, combine and factorise for plot with HepG2}
+Summary_events <- rbind(Summary_events_HeLa, num_DSE_SRRM2_HepG2) |>
+  mutate(EXPERIMENT = factor(EXPERIMENT, levels = c("TAF2", "TAF2∆IDR", "SRRM2-KD"))) |>
+  mutate(AS_TYPE = factor(AS_TYPE, levels = rev(c("Exon", "Intron", "Alt. 3' ss", "Alt. 5' ss" ))))
+```
+
+```{r, plot number of DSE with HepG2, warning = FALSE, fig.width = 12, fig.height = 4}
+ggplot(Summary_events) +
+  aes( x = Num_DSE, y = AS_TYPE, fill = DIRECTION) +
+  facet_wrap( ~EXPERIMENT+CELL_TYPE, nrow = 1) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6, linewidth = 0.2 ) +
+  geom_text(aes(label = Num_DSE), position = position_dodge(width = 0.7), hjust = 1.05, colour = 'white', size = 1 ) + 
+  scale_fill_manual(values = c('UP' = 'firebrick2', 'DOWN' = 'dodgerblue2', 'BOTH' = 'purple4') ) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.05), add = 0), 
+                     breaks = c(0, 150, 300, 450, 600, 750),
+                     limits = c(0, NA)) +
+  scale_y_discrete(expand = expansion(mult = 0.05, add = 0) ) +
+  labs(x = 'Number of AS events') +
+  thm_bar +
+  theme(panel.spacing = unit(0.1, "lines"),
+        strip.text = element_text(margin = margin(t = 0, b = 0)))
+```
+
+```{r, Save Figure Extra bars, warning = FALSE}
+ggsave(filename = paste0('Fig_Extra_Num_SHARED_UNIQUELY_DSE_dPSI', dPSI_thshld, '_Bar.pdf'), plot = last_plot(), 
+       device = cairo_pdf, path = pdf_dir_fig, units = 'cm', width = 10,
+       height = 4)
+```
+
+Prepare a supplementary table.
+
+```{r, export table of TAF2 dataset}
+rename_DSE_TAF2 <- DSE_TAF2
+rename_DSE_TAF2[rename_DSE_TAF2$EXPERIMENT == 'TAF2∆IDR', ]$EXPERIMENT <- 'TAF2dIDR'
+
+write_delim(x = rename_DSE_TAF2, file = file.path(tbl_dir_fig, 'Supplementary_Table_TAF2_AS_Results.tsv'), 
+            delim = '\t', col_names = T, append = F, quote = 'none')
+```
+
+Export also SRRM2 data to file.
+
+```{r, export table of SRRM2 dataset}
+write_delim(x = DSE_SRRM2, file = file.path(tbl_dir_fig, 'Supplementary_Table_SRRM2_AS_Results.tsv'), 
+            delim = '\t', col_names = T, append = F, quote = 'none')
+```
+
+Combine the two tables in Excel outside of R.
+
+# Venn diagramms
+
+Calculate overlap between experiments by extracting the alternatively spliced events ID and measure the intersection between all experiments.
+
+```{r, get unique DSE IDs}
+sel_dPSI_TAF2_HeLa <- subset(DSE_TAF2, EXPERIMENT == 'TAF2') |>
+  select( c(GENE, AS_TYPE, EVENT, dPSI_TAF2 ) ) |> 
+  unique() |>
+  mutate(AS_TYPE = str_replace(pattern = 'Acceptor', replacement = "3' ss", AS_TYPE)) |>
+  mutate(AS_TYPE = str_replace(pattern = 'Donor', replacement = "5' ss", AS_TYPE)) |>
+  mutate(AS_TYPE = factor(AS_TYPE, levels = c("Exon", "Intron","Alt. 3' ss", "Alt. 5' ss") ) )
+
+sel_dPSI_TAF2dIDR_HeLa <- subset(DSE_TAF2, EXPERIMENT == 'TAF2∆IDR' ) |> 
+  select( c(GENE, AS_TYPE, EVENT, dPSI_TAF2dIDR ) ) |>
+  unique() |>
+  mutate(AS_TYPE = str_replace(pattern = 'Acceptor', replacement = "3' ss", AS_TYPE)) |>
+  mutate(AS_TYPE = str_replace(pattern = 'Donor', replacement = "5' ss", AS_TYPE)) |>
+  mutate(AS_TYPE = factor(AS_TYPE, levels = c("Exon", "Intron","Alt. 3' ss", "Alt. 5' ss") ) )
+
+sel_dPSI_SRRM2_HeLa <- DSE_SRRM2 |>
+  select( c(GENE, AS_TYPE, EVENT, dPSI_SRRM2_HeLa ) ) |>
+  unique() |>
+  mutate(AS_TYPE = str_replace(pattern = 'Acceptor', replacement = "3' ss", AS_TYPE)) |>
+  mutate(AS_TYPE = str_replace(pattern = 'Donor', replacement = "5' ss", AS_TYPE)) |>
+  mutate(AS_TYPE = factor(AS_TYPE, levels = c("Exon", "Intron","Alt. 3' ss", "Alt. 5' ss") ) )
+
+sel_dPSI_SRRM2_HepG2 <- DSE_SRRM2_HepG2 |>
+  select( c(GENE, AS_TYPE, EVENT, dPSI_SRRM2_HepG2 ) ) |>
+  unique() |>
+  mutate(AS_TYPE = str_replace(pattern = 'Acceptor', replacement = "3' ss", AS_TYPE)) |>
+  mutate(AS_TYPE = str_replace(pattern = 'Donor', replacement = "5' ss", AS_TYPE)) |>
+  mutate(AS_TYPE = factor(AS_TYPE, levels = c("Exon", "Intron","Alt. 3' ss", "Alt. 5' ss") ) )
+
+ID_TAF2 <- sel_dPSI_TAF2_HeLa$EVENT
+stopifnot(length(ID_TAF2) == nrow(sel_dPSI_TAF2_HeLa))
+
+ID_TAF2dIDR <- sel_dPSI_TAF2dIDR_HeLa$EVENT
+stopifnot(length(ID_TAF2dIDR) == nrow(sel_dPSI_TAF2dIDR_HeLa))
+
+ID_SRRM2 <- sel_dPSI_SRRM2_HeLa$EVENT
+stopifnot(length(ID_SRRM2) == nrow(sel_dPSI_SRRM2_HeLa))
+
+ID_SRRM2_HepG2 <- sel_dPSI_SRRM2_HepG2$EVENT
+stopifnot(length(ID_SRRM2_HepG2) == nrow(sel_dPSI_SRRM2_HepG2))
+```
+
+Check numbers of events that are differentially expressed in all datasets.
+
+```{r, some infos on HeLa cells intersections}
+message("Intersect TAF2 and ∆IDR: ", length(intersect(ID_TAF2, ID_TAF2dIDR)))
+message("Intersect TAF2 and SRRM2: ", length(intersect(ID_TAF2, ID_SRRM2)))
+message("Intersect ∆IDR and SRRM2: ", length(intersect(ID_TAF2dIDR, ID_SRRM2)))
+message("Intersect TAF2, ∆IDR and SRRM2: ", length( intersect(intersect(ID_TAF2, ID_TAF2dIDR), ID_SRRM2)) )
+```
+
+::: {.callout-important}
+There's little overlap between HeLa and HepG2 knockdown experiments.
+:::
+
+```{r, some infos of SRRM2 KD}
+message("Intersect HeLa-SRRM2-KD and HepG2-SRRM2-KD: ", length(intersect(ID_SRRM2, ID_SRRM2_HepG2)))
+```
+
+**Generate and save to pdf the Venn diagrams**.
+
+TAF2 & NLS-TAF2-∆IDR in HeLa.
+
+```{r, TAF2 and dIDR, message = FALSE, warning = FALSE, fig.width = 4, fig.height = 3}
+ggVennDiagram(list("TAF2" = ID_TAF2, "∆IDR" = ID_TAF2dIDR) ) +
+  scale_fill_distiller(palette = "Paired", direction = 1) + 
+  coord_flip() +
+  theme(legend.position = 'none') -> p_VD_TAF2_dIDR
+
+p_VD_TAF2_dIDR
+
+ggsave(filename = paste0('Fig_6D_TAF2_dIDR_ALL_DSE_dPSI', dPSI_thshld, '_VD.pdf'), 
+       plot = p_VD_TAF2_dIDR, 
+       device = cairo_pdf, path = pdf_dir_fig, units = 'cm', width = 10.16,
+       height = 7.62)
+```
+
+TAF2 & SRRM2-KD in HeLa.
+
+```{r, TAF2 and SRRM2, message = FALSE, warning = FALSE, fig.width = 4, fig.height = 3}
+ggVennDiagram(list("TAF2" = ID_TAF2, "SRRM2-KD" = ID_SRRM2) ) +
+  scale_fill_distiller(palette = "Dark2", direction = 1) + 
+  coord_flip() +
+  theme(legend.position = 'none') -> p_VD_TAF2_SRRM2
+
+p_VD_TAF2_SRRM2
+
+ggsave(filename = paste0('Fig_6D_TAF2_SRRM2_ALL_DSE_dPSI', dPSI_thshld, '_VD.pdf'), 
+       plot = p_VD_TAF2_SRRM2, 
+       device = cairo_pdf, path = pdf_dir_fig, units = 'cm', width = 10.16,
+       height = 7.62)
+```
+
+NLS-TAF2-∆IDR & SRRM2-KD in HeLa.
+
+```{r, dIDR and SRRM2, message = FALSE, warning = FALSE, fig.width = 4, fig.height = 3}
+ggVennDiagram(list("∆IDR" = ID_TAF2dIDR, "SRRM2-KD" = ID_SRRM2) ) +
+  scale_fill_distiller(palette = "Accent", direction = 1) + 
+  coord_flip() +
+  theme(legend.position = 'none') -> p_VD_dIDR_SRRM2
+
+p_VD_dIDR_SRRM2
+
+ggsave(filename = paste0('Fig_6D_dIDR_SRRM2_ALL_DSE_dPSI', dPSI_thshld, '_VD.pdf'), 
+       plot = p_VD_dIDR_SRRM2, 
+       device = cairo_pdf, path = pdf_dir_fig, units = 'cm', width = 10.16,
+       height = 7.62)
+```
+
+SRRM2-KD in HeLa & SRRM2-KD in HepG2.
+
+```{r, HeLa and HepG2 KD, message = FALSE, warning = FALSE, fig.width = 4, fig.height = 3}
+ggVennDiagram(list("SRRM2-KD-HeLa" = ID_SRRM2, "SRRM2-KD-HepG2" = ID_SRRM2_HepG2) ) +
+  scale_fill_distiller(palette = "Spectral", direction = 1) + 
+  coord_flip() +
+  theme(legend.position = 'none') -> p_VD_SRRM2_HeLa_HepG2
+
+p_VD_SRRM2_HeLa_HepG2
+
+ggsave(filename = paste0('Fig_Extra_HeLa_vs_HepG2_SRRM2-KD_ALL_DSE_dPSI', dPSI_thshld, '_VD.pdf'), 
+       plot = p_VD_SRRM2_HeLa_HepG2, 
+       device = cairo_pdf, path = pdf_dir_fig, units = 'cm', width = 10.16,
+       height = 7.62)
+```
+
+# ∆PSI correlation scatter plots
+
+Check those that are positively correlating.
+
+```{r, TAF2 and dIDR corr}
+inner_join(x = sel_dPSI_TAF2_HeLa, y = sel_dPSI_TAF2dIDR_HeLa, by = join_by(GENE, EVENT, AS_TYPE) ) |>
+  mutate(Quadrant = 
+         case_when(dPSI_TAF2 >= 0 &  dPSI_TAF2dIDR >= 0 ~ "I", 
+                   dPSI_TAF2 < 0 &  dPSI_TAF2dIDR >= 0 ~ "II",
+                   dPSI_TAF2 < 0 &  dPSI_TAF2dIDR < 0 ~ "III",
+                   dPSI_TAF2 >= 0 &  dPSI_TAF2dIDR < 0 ~ "IV")) -> DSE_COR_TAF2_dIDR
+  
+DSE_POS_COR_TAF2_dIDR <- subset(DSE_COR_TAF2_dIDR, Quadrant %in% c('I', 'III'))
+```
+
+```{r, pos corr TAF2 and dIDR}
+message('Positively correlating DSE between TAF2 and ∆IDR: ', nrow(DSE_POS_COR_TAF2_dIDR))
+```
+
+```{r, Plot corr TAF2 and dIDR, fig.height = 5, fig.width = 5, warning = FALSE}
+ggplot(DSE_COR_TAF2_dIDR) +
+  aes(x = dPSI_TAF2, y = dPSI_TAF2dIDR, fill = AS_TYPE) +
+  geom_vline(xintercept = 0, colour = 'black', linewidth = 0.2) +
+  geom_hline(yintercept = 0, colour = 'black', linewidth = 0.2) +
+  geom_point(shape = 21, size = 2, alpha = 1, show.legend = T, stroke = 0.2) +
+  geom_text_repel(aes(label = GENE), show.legend = F, size = 2, family = 'Arial') +
+  scale_x_continuous(n.breaks = 10, oob = scales::squish, limits = c(-dPSI_squish, dPSI_squish),
+                     expand = expansion(mult = 0, add = 0.5)) +
+  scale_y_continuous(n.breaks = 10, oob = scales::squish, limits = c(-dPSI_squish, dPSI_squish),
+                     expand = expansion(mult = 0, add = 0.5) ) +
+  scale_fill_manual(values = c('Exon' = 'dodgerblue', 'Intron' = 'darkgreen',
+                               "Alt. 3' ss" = "coral", "Alt. 5' ss" = "coral3"),
+                      name = "AS type") +
+  coord_fixed(ratio = 1, clip = 'off') +
+  labs(x = "HeLa \u0394PSI (TAF2 OE - Cntrl)", y = "HeLa \u0394PSI (NLS-TAF2 \u0394IDR OE - Cntrl)", 
+        caption = "") +
+  thm_scatter +
+  theme(legend.position = 'inside',
+        legend.position.inside = c(0.8, 0.2) ) -> p_dPSI_TAF2_dIDR
+p_dPSI_TAF2_dIDR
+```
+
+```{r, TAF2 and SRRM2 corr}
+inner_join(x = sel_dPSI_TAF2_HeLa, y = sel_dPSI_SRRM2_HeLa, by = join_by(GENE, EVENT, AS_TYPE) ) |>
+  mutate(Quadrant = 
+         case_when(dPSI_TAF2 >= 0 &  dPSI_SRRM2_HeLa >= 0 ~ "I", 
+                   dPSI_TAF2 < 0 &  dPSI_SRRM2_HeLa >= 0 ~ "II",
+                   dPSI_TAF2 < 0 &  dPSI_SRRM2_HeLa < 0 ~ "III",
+                   dPSI_TAF2 >= 0 &  dPSI_SRRM2_HeLa < 0 ~ "IV")) |>
+  arrange(desc(AS_TYPE)) -> DSE_COR_TAF2_SRRM2
+  
+# table(DSE_COR_TAF2_SRRM2$Quadrant)
+DSE_POS_COR_TAF2_SRRM2 <- subset(DSE_COR_TAF2_SRRM2, Quadrant %in% c('I', 'III'))
+```
+
+```{r, pos corr TAF2 and SRRM2-KD}
+message('Positively correlating DSE between TAF2 and SRRM2: ', nrow(DSE_POS_COR_TAF2_SRRM2))
+```
+
+```{r, plot corr TAF2 and SRRM2-KD, fig.height = 6, fig.width = 6, warning=FALSE}
+ggplot(DSE_COR_TAF2_SRRM2) +
+  aes(x = dPSI_TAF2, y = dPSI_SRRM2_HeLa, fill = AS_TYPE) +
+  geom_vline(xintercept = 0, colour = 'black', linewidth = 0.2) +
+  geom_hline(yintercept = 0, colour = 'black', linewidth = 0.2) +
+  geom_point(shape = 21, size = 2, alpha = 1, show.legend = T, stroke = 0.2) +
+  geom_text_repel(aes(label = GENE), show.legend = F, size = 2, family = 'Arial') +
+  scale_x_continuous(n.breaks = 10, oob = scales::squish, limits = c(-dPSI_squish, dPSI_squish),
+                     expand = expansion(mult = 0, add = 0.5)) +
+  scale_y_continuous(n.breaks = 10, oob = scales::squish, limits = c(-dPSI_squish, dPSI_squish),
+                     expand = expansion(mult = 0, add = 0.5) ) +
+  scale_fill_manual(values = c('Exon' = 'dodgerblue', 'Intron' = 'darkgreen',
+                               "Alt. 3' ss" = "coral", "Alt. 5' ss" = "coral3"),
+                      name = "AS type") +
+  coord_fixed(ratio = 1, clip = 'off') +
+  labs(x = "HeLa \u0394PSI (TAF2 OE - Cntrl)", y = "HeLa \u0394PSI (SRRM2 KD - Cntrl)", 
+        caption = "") +
+  thm_scatter +
+  theme(legend.position = 'inside',
+        legend.position.inside = c(0.95, 0.05),
+        legend.title = element_blank() ) -> p_dPSI_TAF2_SRRM2
+p_dPSI_TAF2_SRRM2
+```
+
+```{r, dIDR and SRRM2 corr}
+inner_join(x = sel_dPSI_TAF2dIDR_HeLa, y = sel_dPSI_SRRM2_HeLa, by = join_by(GENE, EVENT, AS_TYPE) ) |>
+  mutate(Quadrant = 
+         case_when(dPSI_TAF2dIDR >= 0 &  dPSI_SRRM2_HeLa >= 0 ~ "I", 
+                   dPSI_TAF2dIDR < 0 &  dPSI_SRRM2_HeLa >= 0 ~ "II",
+                   dPSI_TAF2dIDR < 0 &  dPSI_SRRM2_HeLa < 0 ~ "III",
+                   dPSI_TAF2dIDR >= 0 &  dPSI_SRRM2_HeLa < 0 ~ "IV")) |>
+   arrange(desc(AS_TYPE)) -> DSE_COR_dIDR_SRRM2
+  
+# table(DSE_COR_dIDR_SRRM2$Quadrant)
+DSE_POS_COR_dIDR_SRRM2 <- subset(DSE_COR_dIDR_SRRM2, Quadrant %in% c('I', 'III'))
+```
+
+```{r, pos cor dIDR and SRRM2}
+message('Positively correlating DSE between ∆IDR and SRRM2: ', nrow(DSE_POS_COR_dIDR_SRRM2))
+```
+
+
+```{r, plot cor dIDR and SRRM2, fig.height = 6, fig.width = 6, warning = FALSE}
+ggplot(DSE_COR_dIDR_SRRM2) +
+  aes(x = dPSI_TAF2dIDR, y = dPSI_SRRM2_HeLa, fill = AS_TYPE) +
+  geom_vline(xintercept = 0, colour = 'black', linewidth = 0.2) +
+  geom_hline(yintercept = 0, colour = 'black', linewidth = 0.2) +
+  geom_point(shape = 21, size = 2, alpha = 1, show.legend = T, stroke = 0.2) +
+  geom_text_repel(aes(label = GENE), show.legend = F, size = 2, family = 'Arial') +
+  scale_x_continuous(n.breaks = 10, oob = scales::squish, limits = c(-dPSI_squish, dPSI_squish),
+                     expand = expansion(mult = 0, add = 0.5)) +
+  scale_y_continuous(n.breaks = 10, oob = scales::squish, limits = c(-dPSI_squish, dPSI_squish),
+                     expand = expansion(mult = 0, add = 0.5) ) +
+  scale_fill_manual(values = c('Exon' = 'dodgerblue', 'Intron' = 'darkgreen',
+                               "Alt. 3' ss" = "coral", "Alt. 5' ss" = "coral3"),
+                      name = "AS type") +
+  coord_fixed(ratio = 1, clip = 'off') +
+  labs(x = "HeLa \u0394PSI (NLS-TAF2 \u0394IDR OE - Cntrl)", y = "HeLa \u0394PSI (SRRM2 KD - Cntrl)", 
+        caption = "") +
+  thm_scatter +
+  theme(legend.position = 'inside',
+        legend.position.inside = c(0.95, 0.05),
+        legend.title = element_blank() ) -> p_dPSI_dIDR_SRRM2
+p_dPSI_dIDR_SRRM2
+```
+
+```{r, SRRM2-KD HeLa and HepG2 corr}
+inner_join(x = sel_dPSI_SRRM2_HeLa, y = sel_dPSI_SRRM2_HepG2, by = join_by(GENE, EVENT, AS_TYPE) ) |>
+  mutate(Quadrant = 
+         case_when(dPSI_SRRM2_HeLa >= 0 & dPSI_SRRM2_HepG2 >= 0 ~ "I", 
+                   dPSI_SRRM2_HeLa < 0 &  dPSI_SRRM2_HepG2 >= 0 ~ "II",
+                   dPSI_SRRM2_HeLa < 0 &  dPSI_SRRM2_HepG2 < 0 ~ "III",
+                   dPSI_SRRM2_HeLa >= 0 & dPSI_SRRM2_HepG2 < 0 ~ "IV")) |>
+   arrange(desc(AS_TYPE)) -> DSE_COR_SRRM2_HeLa_HepG2
+  
+DSE_POS_COR_SRRM2_HeLa_HepG2 <- subset(DSE_COR_SRRM2_HeLa_HepG2, Quadrant %in% c('I', 'III'))
+```
+
+```{r, pos corr SRRM2-KD HeLa and HepG2}
+message('Positively correlating DSE between ∆IDR and SRRM2: ', nrow(DSE_POS_COR_SRRM2_HeLa_HepG2))
+```
+
+```{r, plot SRRM2-KD HeLa and HepG2 corr, fig.height = 6, fig.width = 6, warning = FALSE}
+ggplot(DSE_COR_SRRM2_HeLa_HepG2) +
+  aes(x = dPSI_SRRM2_HepG2, y = dPSI_SRRM2_HeLa, fill = AS_TYPE) +
+  geom_vline(xintercept = 0, colour = 'black', linewidth = 0.2) +
+  geom_hline(yintercept = 0, colour = 'black', linewidth = 0.2) +
+  geom_point(shape = 21, size = 2, alpha = 1, show.legend = T, stroke = 0.2) +
+  geom_text_repel(aes(label = GENE), show.legend = F, size = 2, family = 'Arial') +
+  scale_x_continuous(n.breaks = 10, oob = scales::squish, limits = c(-dPSI_squish, dPSI_squish),
+                     expand = expansion(mult = 0, add = 0.5)) +
+  scale_y_continuous(n.breaks = 10, oob = scales::squish, limits = c(-dPSI_squish, dPSI_squish),
+                     expand = expansion(mult = 0, add = 0.5) ) +
+  scale_fill_manual(values = c('Exon' = 'dodgerblue', 'Intron' = 'darkgreen',
+                               "Alt. 3' ss" = "coral", "Alt. 5' ss" = "coral3"),
+                      name = "AS type") +
+  coord_fixed(ratio = 1, clip = 'off') +
+  labs(x = "HepG2 \u0394PSI (SRRM2 KD - Cntrl)", y = "HeLa \u0394PSI (SRRM2 KD - Cntrl)", 
+        caption = "") +
+  thm_scatter +
+  theme(legend.position = 'inside',
+        legend.position.inside = c(0.95, 0.05),
+        legend.title = element_blank() ) -> p_dPSI_SRRM2_HeLa_HepG2
+p_dPSI_SRRM2_HeLa_HepG2
+```
+
+Explain that the events with a ∆PSI lower than |15| are there because they are found differentially spliced by the `diff` method.
+
+```{r, fig.height = 4, fig.width = 12, warning = FALSE}
+wrap_plots(p_dPSI_TAF2_dIDR, p_dPSI_TAF2_SRRM2, p_dPSI_dIDR_SRRM2, nrow = 1) + 
+  plot_layout(guides = "collect")
+```
+
+```{r, fig.height = 4, fig.width = 8, warning = FALSE}
+wrap_plots(p_dPSI_TAF2_SRRM2, p_dPSI_dIDR_SRRM2, nrow = 1, tag_level = 'new') + 
+  plot_layout(guides = "collect") + 
+  plot_annotation(tag_levels = 'A') -> fig_6f_g
+fig_6f_g
+```
+
+Fix the legend in illustrator later.
+
+```{r, Save Figure 6F and G, warning = FALSE}
+ggsave(filename = paste0('Fig_6FG_CORR_DSE_dPSI_Scatter.pdf'), plot = fig_6f_g, 
+       device = cairo_pdf, path = pdf_dir_fig, units = 'cm', width = 12,
+       height = 5.5)
+```
+
+Plot all SRRM2 correlations
+
+```{r, fig.height = 4, fig.width = 12, warning = FALSE}
+wrap_plots(p_dPSI_TAF2_SRRM2, p_dPSI_dIDR_SRRM2, p_dPSI_SRRM2_HeLa_HepG2, 
+           nrow = 1, tag_level = 'new') + 
+  plot_layout(guides = "collect") + 
+  plot_annotation(tag_levels = 'A') -> fig_SRRM2
+fig_SRRM2
+```
+
+```{r, Save Extra Figure SRRM2, warning = FALSE}
+ggsave(filename = paste0('Fig_Extra_CORR_DSE_dPSI_Scatter.pdf'), plot = fig_SRRM2, 
+       device = cairo_pdf, path = pdf_dir_fig, units = 'cm', width = 30,
+       height = 11)
+```
+
+# GO terms
+
+```{r, import background genes from vast-tools}
+BG_genes <- read_delim(BG_IDs_path, delim = '\t', col_names = 'ensembl_gene_id', show_col_types = F)
+BG_genes <- grep(pattern = '^ENSG', x = BG_genes$ensembl_gene_id, value = T) 
+```
+
+Map the ensembl gene ids to gene names:
+
+```{r, create a biomart object}
+ensembl_hsa <- gimme_mart(version = 112)
+```
+
+
+```{r, map gene IDs}
+anno_df <- ensembl_id_2_gene_name(ensembl_gene_id = BG_genes,
+                                  only_gene_name = F,
+                                  verbose = T, mRt_objct = ensembl_hsa)
+```
+
+Get gene names.
+
+```{r, get background gene names}
+BG_GENEs <- anno_df$external_gene_name
+BG_GENEs <- BG_GENEs[!is.na(BG_GENEs)]
+BG_GENEs <- BG_GENEs[BG_GENEs != '' ]
+message('Background gene names: ', length(BG_GENEs) )
+```
+
+Get the foreground genes of the differentially spliced exons and introns.
+
+```{r, get gene IDs of DSE of TAF2}
+TAF2_EX_UPDO_GENE <- subset(DSE_TAF2, EXPERIMENT == 'TAF2' & DIRECTION %in% c("UP", "DOWN") & AS_TYPE == "Exon") |>
+  subset(!is.na(GENE)) |> pull(GENE) |> unique()
+
+TAF2_IN_UPDO_GENE <- subset(DSE_TAF2, EXPERIMENT == 'TAF2' & DIRECTION %in% c("UP", "DOWN") & AS_TYPE == "Intron") |>
+  subset(!is.na(GENE)) |> pull(GENE) |> unique()
+
+message("Genes with differentially spliced exons in TAF2: ", length(TAF2_EX_UPDO_GENE))
+message("Genes with differentially spliced introns in TAF2: ", length(TAF2_IN_UPDO_GENE))
+```
+
+
+```{r, get gene IDs of DSE of dIDR}
+dIDR_EX_UPDO_GENE <- subset(DSE_TAF2, EXPERIMENT == 'TAF2∆IDR' & DIRECTION %in% c("UP", "DOWN") & AS_TYPE == "Exon") |>
+  subset(!is.na(GENE)) |> pull(GENE) |> unique()
+
+dIDR_IN_UPDO_GENE <- subset(DSE_TAF2, EXPERIMENT == 'TAF2∆IDR' & DIRECTION %in% c("UP", "DOWN") & AS_TYPE == "Intron") |>
+  subset(!is.na(GENE)) |> pull(GENE) |> unique()
+
+message("Genes with differentially spliced exons in ∆IDR: ", length(dIDR_EX_UPDO_GENE))
+message("Genes with differentially spliced introns in ∆IDR: ", length(dIDR_IN_UPDO_GENE))
+```
+
+```{r, get gene IDs of DSE of SRRM2 HeLa}
+SRRM2_EX_UPDO_GENE <- subset(DSE_SRRM2, EXPERIMENT == 'HeLa-SRRM2-KD' & DIRECTION %in% c("UP", "DOWN") & AS_TYPE == "Exon") |>
+  subset(!is.na(GENE)) |> pull(GENE) |> unique()
+
+SRRM2_IN_UPDO_GENE <- subset(DSE_SRRM2, EXPERIMENT == 'HeLa-SRRM2-KD' & DIRECTION %in% c("UP", "DOWN") & AS_TYPE == "Intron") |>
+  subset(!is.na(GENE)) |> pull(GENE) |> unique()
+
+message("Genes with differentially spliced exons in ∆IDR: ", length(SRRM2_EX_UPDO_GENE))
+message("Genes with differentially spliced introns in ∆IDR: ", length(SRRM2_IN_UPDO_GENE))
+```
+
+Discard the genes in the foreground from the background
+
+```{r, filter background}
+BG_GENEs <- BG_GENEs[!(BG_GENEs %in% c(TAF2_EX_UPDO_GENE, TAF2_IN_UPDO_GENE,
+                                       dIDR_EX_UPDO_GENE, dIDR_IN_UPDO_GENE,
+                                       SRRM2_EX_UPDO_GENE, SRRM2_IN_UPDO_GENE))]
+message('Background gene names: ', length(BG_GENEs) ) # 10196
+```
+
+Create a GO terms analysis input data frame.
+
+```{r, make GO termns input}
+gene_lists <- list(TAF2_EX_UPDO_GENE, TAF2_IN_UPDO_GENE,
+                   dIDR_EX_UPDO_GENE, dIDR_IN_UPDO_GENE,
+                   SRRM2_EX_UPDO_GENE, SRRM2_IN_UPDO_GENE,
+                   BG_GENEs)
+
+df_list <- lapply(gene_lists, function(x) as.data.frame(t(x)))
+df <- do.call(bind_rows, df_list) |> t()
+
+colnames(df) <- c("TAF2_EX_UPDO_GENE", "TAF2_IN_UPDO_GENE",
+                  "dIDR_EX_UPDO_GENE", "dIDR_IN_UPDO_GENE",
+                  "SRRM2_EX_UPDO_GENE", "SRRM2_IN_UPDO_GENE",
+                  "BG_GENEs")
+```
+
+Check input length.
+
+```{r, check input length}
+apply(df, 2, FUN = function(x){ length(which(!is.na(x))) })
+```
+
+Save to table.
+
+```{r, save to tbl}
+write_delim(x = as.data.frame(df), file = file.path(tbl_dir_fig, 'GO_Terms_Genes_Input.tsv'), 
+            delim = '\t', col_names = T, quote = 'none')
+```
+
+## Compute GO termns
+
+TAF2 exons UP/DOWN
+
+```{r, TAF2 exons GO terms, warning = FALSE, message = FALSE}
+data.frame(gene_ids = c(TAF2_EX_UPDO_GENE, BG_GENEs),
+           is_candidate = c( rep(1, length(TAF2_EX_UPDO_GENE)), 
+                             rep(0, length(BG_GENEs)) )) |>
+  run_GOfuncR_slim() -> TAF2_EX_UPDO_RES
+TAF2_EX_UPDO_DF <- TAF2_EX_UPDO_RES[[2]] |> mutate(GROUP = 'TAF2_EXONS')
+```
+
+TAF2 introns UP/DOWN
+
+```{r, TAF2 introns GO terms, warning = FALSE, message = FALSE}
+data.frame(gene_ids = c(TAF2_IN_UPDO_GENE, BG_GENEs),
+           is_candidate = c( rep(1, length(TAF2_IN_UPDO_GENE)), 
+                             rep(0, length(BG_GENEs)) )) |>
+  run_GOfuncR_slim() -> TAF2_IN_UPDO_RES
+TAF2_IN_UPDO_DF <- TAF2_IN_UPDO_RES[[2]] |> mutate(GROUP = 'TAF2_INTRONS')
+```
+ 
+∆IDR exons UP/DOWN
+```{r, dIDR exons GO terms, warning = FALSE, message = FALSE}
+data.frame(gene_ids = c(dIDR_EX_UPDO_GENE, BG_GENEs),
+           is_candidate = c( rep(1, length(dIDR_EX_UPDO_GENE)),
+                             rep(0, length(BG_GENEs)) )) |>
+  run_GOfuncR_slim() -> dIDR_EX_UPDO_RES 
+
+dIDR_EX_UPDO_DF <- dIDR_EX_UPDO_RES[[2]] |> mutate(GROUP = '∆IDR_EXONS')
+```
+
+∆IDR introns UP/DOWN
+
+```{r, dIDR introns GO terms, warning = FALSE, message = FALSE}
+data.frame(gene_ids = c(dIDR_IN_UPDO_GENE, BG_GENEs),
+           is_candidate = c( rep(1, length(dIDR_IN_UPDO_GENE) ), 
+                             rep(0, length(BG_GENEs) ) )) |>
+  run_GOfuncR_slim() -> dIDR_IN_UPDO_RES 
+
+dIDR_IN_UPDO_DF <- dIDR_IN_UPDO_RES[[2]] |>  mutate(GROUP = '∆IDR_INTRONS')
+```
+
+SRRM2 exons UP/DOWN
+
+```{r, SRRM2 exons GO terms, warning = FALSE, message = FALSE}
+data.frame(gene_ids = c(SRRM2_EX_UPDO_GENE, BG_GENEs),
+           is_candidate = c( rep(1, length(SRRM2_EX_UPDO_GENE)), 
+                             rep(0, length(BG_GENEs)) )) |>
+  run_GOfuncR_slim() -> SRRM2_EX_UPDO_RES 
+
+SRRM2_EX_UPDO_DF <- SRRM2_EX_UPDO_RES[[2]] |> mutate(GROUP = 'SRRM2_EXONS') 
+```
+
+SRRM2 introns UP/DOWN
+
+```{r, SRRM2 introns GO terms, warning = FALSE, message = FALSE}
+data.frame(gene_ids = c(SRRM2_IN_UPDO_GENE, BG_GENEs),
+           is_candidate = c( rep(1, length(SRRM2_IN_UPDO_GENE)), 
+                             rep(0, length(BG_GENEs)) )) |>
+  run_GOfuncR_slim() -> SRRM2_IN_UPDO_RES
+
+SRRM2_IN_UPDO_DF <- SRRM2_IN_UPDO_RES[[2]] |> mutate(GROUP = 'SRRM2_INTRONS')
+```
+
+Merge all results together in one table and save it to file.
+```{r, tidy GO termns}
+list_df_GOs <- list(TAF2_EX_UPDO_DF, dIDR_EX_UPDO_DF, SRRM2_EX_UPDO_DF, 
+                    TAF2_IN_UPDO_DF, dIDR_IN_UPDO_DF, SRRM2_IN_UPDO_DF)
+
+names(list_df_GOs) <- c('TAF2_EX_UPDO', 'dIDR_EX_UPDO', 'SRRM2_EX_UPDO', 
+                        'TAF2_IN_UPDO', 'dIDR_IN_UPDO', 'SRRM2_IN_UPDO')
+
+bind_rows(list_df_GOs) |>
+  relocate(GROUP, .before = `Gene Ontology`) |>
+  mutate(GROUP = factor(GROUP, c("TAF2_EXONS", "∆IDR_EXONS", "SRRM2_EXONS",
+                                 "TAF2_INTRONS", "∆IDR_INTRONS", "SRRM2_INTRONS") ) ) -> all_GO_res
+
+write_delim(x = all_GO_res,
+            file = file.path(tbl_dir_fig, 'GO_Terms_Enrichment_Results_with_SlimGo.txt'), 
+            delim = '\t', col_names = T, quote = 'all')
+```
+ 
+## Plot GO termns
+
+Decide what to plot.
+
+```{r, select the GO terms to plot.}
+# TAFs exons and SRRM2 introns
+one_3_shared <- Reduce(intersect, lapply(list(TAF2_EX_UPDO_DF, dIDR_EX_UPDO_DF, SRRM2_IN_UPDO_DF), function(x) x$Term ) )
+
+sel_common_terms <- c('DNA-binding transcription factor activity', 
+                      'RNA polymerase II transcription regulatory region sequence-specific DNA binding',
+                      'cilium movement')
+
+dIDR_specif_terms <- c('high voltage-gated calcium channel activity', 'hepatocyte differentiation', 
+                       'negative regulation of microtubule binding')
+
+sel_events <- c('gated channel activity', 'GTPase activator activity', 
+                'histone H3K27 methyltransferase activity', 'gated channel activity',
+                "cellular response to cholesterol", "Fanconi anaemia nuclear complex",
+                "vagus nerve development", "transmembrane signaling receptor activity",
+                "primary alcohol biosynthetic process",
+                "meiosis I")
+plot_terms <- c(sel_common_terms, sel_events, one_3_shared)
+```
+
+```{r, prepare for plotting}
+subset(all_GO_res, Term %in% plot_terms) |>
+  mutate(Terms = Term) |>
+  mutate(Terms = gsub('RNA polymerase II transcription', 'pol II transc.', Terms)) |>
+  mutate(Terms = gsub('sequence-specific DNA binding', 'TF binding', Terms)) |>
+  mutate(Terms = gsub('membrane', 'membr.', Terms)) |>
+  mutate(Terms = gsub('histone', '', Terms)) |>
+  mutate(Terms = gsub('high', '', Terms)) |>
+  mutate(Terms = gsub('negative', 'neg.', Terms)) |>
+  mutate(Terms = gsub('transcription factor', 'TF', Terms)) |>
+  mutate(Terms = gsub('projection', 'project.', Terms)) -> plot_go
+```
+
+Plot GO terms as a heatmap.
+
+```{r, Plot GO terms, fig.width = 4, fig.height = 3}
+ggplot(plot_go) +
+  aes(x = GROUP, y = Terms, fill = `-log10.p-value`) +
+  geom_tile(colour = 'black', linewidth = 0.2) +
+  scale_x_discrete(labels = \(x) gsub(pattern = '_', replacement = '\n', x),
+                   expand = expansion(0, 0)) +
+  scale_y_discrete(expand = expansion(0, 0)) +
+  scale_fill_viridis_c(direction = -1, name = '-log10 P val.') +
+  guides( fill = guide_colourbar( barheight = unit(45, units = "mm"), 
+                                  barwidth = unit(2, units = "mm") ) ) +
+  theme_classic(base_family = 'Arial', base_size = 8) +
+  theme(legend.title = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_text(colour = 'black'),
+        axis.text.x = element_text(angle = 45, hjust = 1)) -> p_GO
+p_GO
+```
+
+Save to pdf and do small adjustments in Illustrator.
+
+```{r, Save GO terms plot}
+ggsave(filename = 'Fig_6E_GO_terms_HM.pdf', plot = p_GO, device = cairo_pdf, 
+       path = pdf_dir_fig, units = 'cm', width = 9, height = 6)
+```
+
+# Exons and introns feature analysis
+
+Some notes from my analysis with MATT from the command line
+
+## Prepare the data for MATT
+
+### Create Exons control sets
+
+Create sets of up to 1000 exons in different categories.
+
+AS non constitutive (ASNC)
+
+```{sh, eval = FALSE}
+cd vast_tools
+matt add_val vast_out/compare_2023_08_01/min_dPSI15_min_range0_max_dPSI5/AS_NC-HeLa_TAF2OE_vs_CNTRL_uniq_noB3_pIR-Max_dPSI5.tab GROUP AS_NC | grep -P "(HsaEX|EVENT)" | matt rand_rows - 1000 > temp_ASNC.tab
+```
+
+Cryptic exons (CR)
+
+```{sh, eval = FALSE}
+matt add_val vast_out/compare_2023_08_01/min_dPSI15_min_range0_max_dPSI5/CR-HeLa_TAF2OE_vs_CNTRL_uniq_noB3_pIR.tab GROUP CR | grep -P "(HsaEX|EVENT)" | matt rand_rows - 1000 > temp_CR.tab
+```
+
+Constitutively spliced (CS)
+
+```{sh, eval = FALSE}
+matt add_val vast_out/compare_2023_08_01/min_dPSI15_min_range0_max_dPSI5/CS-HeLa_TAF2OE_vs_CNTRL_uniq_noB3_pIR.tab GROUP CS | grep -P "(HsaEX|EVENT)" | matt rand_rows - 1000 > temp_CS.tab
+```
+
+Merge all in one file
+
+```{sh, eval = FALSE}
+tail -n +2 temp_CR.tab | cat temp_ASNC.tab - > temp_ASNC_CR.tab
+tail -n +2 temp_CS.tab | cat temp_ASNC_CR.tab - | cut -f 1-6,32 > temp_all.tab
+```
+Create a `matt cmpr_exons` compatible table
+
+```{sh, eval = FALSE}
+matt get_vast temp_all.tab COORD FullCO COMPLEX LENGTH -gtf /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf > CONTROL_EXONS_AS_CR_CS.tab
+```
+
+### Create introns control sets
+
+Create sets of up to 1000 introns in different categories.
+
+AS non constitutive (ASNC)
+
+```{sh, eval = FALSE}
+matt add_val vast_out/compare_2023_08_01/min_dPSI15_min_range0_max_dPSI5/AS_NC-HeLa_TAF2OE_vs_CNTRL_uniq_noB3_pIR-Max_dPSI5.tab GROUP AS_NC | grep -P "(HsaIN|EVENT)" | matt rand_rows - 1000 > temp_ASNC_INTRONS.tab
+```
+
+Cryptic introns (CR)
+
+```{sh, eval = FALSE}
+matt add_val vast_out/compare_2023_08_01/min_dPSI15_min_range0_max_dPSI5/CR-HeLa_TAF2OE_vs_CNTRL_uniq_noB3_pIR.tab GROUP CR | grep -P "(HsaIN|EVENT)" | matt rand_rows - 1000 > temp_CR_INTRON.tab
+```
+
+Constitutively spliced (CS)
+
+```{sh, eval = FALSE}
+matt add_val vast_out/compare_2023_08_01/min_dPSI15_min_range0_max_dPSI5/CS-HeLa_TAF2OE_vs_CNTRL_uniq_noB3_pIR.tab GROUP CS | grep -P "(HsaIN|EVENT)" | matt rand_rows - 1000 > temp_CS_INTRON.tab
+```
+Merge all in 1 file. Column 32 is the `GROUP` columns
+```{sh, eval = FALSE}
+tail -n +2 temp_CR_INTRON.tab | cat temp_ASNC_INTRONS.tab - > temp_ASNC_CR.tab
+tail -n +2 temp_CS_INTRON.tab | cat temp_ASNC_CR.tab - | cut -f 1-6,32 > temp_all.tab
+```
+
+Create a `matt cmpr_introns` compatible table
+
+```{sh, eval = FALSE}
+matt get_vast temp_all.tab COORD FullCO COMPLEX LENGTH -gtf /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf > CONTROL_INTRONS_AS_CR_CS.tab
+```
+
+The same thing was done for SRRM2 dataset to have a tailor made control set. 
+
+### Prepare TAF2 exons and introns input for MATT
+
+```{r}
+TAF2_UP_EX <- subset(DSE_TAF2, AS_TYPE == 'Exon' & DIRECTION == 'UP') |>
+  subset(EXPERIMENT == 'TAF2' ) |>
+  select(!c(EXPERIMENT, AS_TYPE, Sample, PSI, dPSI_TAF2, dPSI_TAF2dIDR, Quality_Score_Value, DIRECTION)) |>
+  unique() |>
+  mutate(GROUP = 'UP_EXONS_TAF2') # 251 exons
+
+TAF2_DOWN_EX <- subset(DSE_TAF2, AS_TYPE == 'Exon' & DIRECTION == 'DOWN') |>
+  subset(EXPERIMENT == 'TAF2' ) |>
+  select(!c(EXPERIMENT, AS_TYPE, Sample, PSI, dPSI_TAF2, dPSI_TAF2dIDR, Quality_Score_Value, DIRECTION)) |>
+  unique() |>
+  mutate(GROUP = 'DOWN_EXONS_TAF2') # 275 exons
+```
+
+```{r}
+dIDR_UP_EX <- subset(DSE_TAF2, AS_TYPE == 'Exon' & DIRECTION == 'UP') |>
+  subset(EXPERIMENT == 'TAF2∆IDR' ) |>
+  select(!c(EXPERIMENT, AS_TYPE, Sample, PSI, dPSI_TAF2, dPSI_TAF2dIDR, Quality_Score_Value, DIRECTION)) |>
+  unique() |>
+  mutate(GROUP = 'UP_EXONS_TAF2dIDR') # 234 exons
+
+dIDR_DOWN_EX <- subset(DSE_TAF2, AS_TYPE == 'Exon' & DIRECTION == 'DOWN') |>
+  subset(EXPERIMENT == 'TAF2∆IDR' ) |>
+  select(!c(EXPERIMENT, AS_TYPE, Sample, PSI, dPSI_TAF2, dPSI_TAF2dIDR, Quality_Score_Value, DIRECTION)) |>
+  unique() |>
+  mutate(GROUP = 'DOWN_EXONS_TAF2dIDR') # 255 exons
+```
+
+```{r}
+TAF2_UP_IN <- subset(DSE_TAF2, AS_TYPE == 'Intron' & DIRECTION == 'UP') |>
+  subset(EXPERIMENT == 'TAF2' ) |>
+  select(!c(EXPERIMENT, AS_TYPE, Sample, PSI, dPSI_TAF2, dPSI_TAF2dIDR, Quality_Score_Value, DIRECTION)) |>
+  unique() |>
+  mutate(GROUP = 'UP_INTRONS_TAF2') # 120 exons
+
+TAF2_DOWN_IN <- subset(DSE_TAF2, AS_TYPE == 'Intron' & DIRECTION == 'DOWN') |>
+  subset(EXPERIMENT == 'TAF2' ) |>
+  select(!c(EXPERIMENT, AS_TYPE, Sample, PSI, dPSI_TAF2, dPSI_TAF2dIDR, Quality_Score_Value, DIRECTION)) |>
+  unique() |>
+  mutate(GROUP = 'DOWN_INTRONS_TAF2') # 99 exons
+```
+
+```{r}
+dIDR_UP_IN <- subset(DSE_TAF2, AS_TYPE == 'Intron' & DIRECTION == 'UP') |>
+  subset(EXPERIMENT == 'TAF2∆IDR' ) |>
+  select(!c(EXPERIMENT, AS_TYPE, Sample, PSI, dPSI_TAF2, dPSI_TAF2dIDR, Quality_Score_Value, DIRECTION)) |>
+  unique() |>
+  mutate(GROUP = 'UP_INTRONS_TAF2dIDR') # 120 exons
+
+dIDR_DOWN_IN <- subset(DSE_TAF2, AS_TYPE == 'Intron' & DIRECTION == 'DOWN') |>
+  subset(EXPERIMENT == 'TAF2∆IDR' ) |>
+  select(!c(EXPERIMENT, AS_TYPE, Sample, PSI, dPSI_TAF2, dPSI_TAF2dIDR, Quality_Score_Value, DIRECTION)) |>
+  unique() |>
+  mutate(GROUP = 'DOWN_INTRONS_TAF2dIDR') # 120 exons
+```
+
+Write input to files temporarily to file.
+```{r, write TMP TAF}
+write_delim(x = TAF2_UP_EX, file = file.path(dse_dir_TAF2, 'TMP_UP_EXONS_HeLa_TAF2.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+
+write_delim(x = TAF2_DOWN_EX, file = file.path(dse_dir_TAF2, 'TMP_DOWN_EXONS_HeLa_TAF2.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+
+write_delim(x = TAF2_UP_IN, file = file.path(dse_dir_TAF2, 'TMP_UP_INTRONS_HeLa_TAF2.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+
+write_delim(x = TAF2_DOWN_IN, file = file.path(dse_dir_TAF2, 'TMP_DOWN_INTRONS_HeLa_TAF2.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+
+```
+
+```{r, write TMP dIDR}
+write_delim(x = dIDR_UP_EX, file = file.path(dse_dir_TAF2, 'TMP_UP_EXONS_HeLa_dIDR.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+
+write_delim(x = dIDR_DOWN_EX, file = file.path(dse_dir_TAF2, 'TMP_DOWN_EXONS_HeLa_dIDR.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+
+write_delim(x = dIDR_UP_IN, file = file.path(dse_dir_TAF2, 'TMP_UP_INTRONS_HeLa_dIDR.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+
+write_delim(x = dIDR_DOWN_IN, file = file.path(dse_dir_TAF2, 'TMP_DOWN_INTRONS_HeLa_dIDR.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+
+```
+
+Annotate these exons with matt `get_vast`
+```{sh, eval = FALSE}
+cd ../diff_spliced_IDs/TAF2-OE/
+
+matt get_vast TMP_UP_EXONS_HeLa_TAF2.tab COORD FullCO COMPLEX LENGTH -gtf /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf > UP_EXONS_HeLa_TAF2.tab
+
+matt get_vast TMP_DOWN_EXONS_HeLa_TAF2.tab COORD FullCO COMPLEX LENGTH -gtf /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf > DOWN_EXONS_HeLa_TAF2.tab
+
+matt get_vast TMP_UP_INTRONS_HeLa_TAF2.tab COORD FullCO COMPLEX LENGTH -gtf /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf > UP_INTRONS_HeLa_TAF2.tab
+
+matt get_vast TMP_DOWN_INTRONS_HeLa_TAF2.tab COORD FullCO COMPLEX LENGTH -gtf /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf > DOWN_INTRONS_HeLa_TAF2.tab
+```
+
+Annotate these introns with matt `get_vast`
+```{sh, eval = FALSE}
+matt get_vast TMP_UP_EXONS_HeLa_dIDR.tab COORD FullCO COMPLEX LENGTH -gtf /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf > UP_EXONS_HeLa_dIDR.tab
+
+matt get_vast TMP_DOWN_EXONS_HeLa_dIDR.tab COORD FullCO COMPLEX LENGTH -gtf /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf > DOWN_EXONS_HeLa_dIDR.tab
+
+matt get_vast TMP_UP_INTRONS_HeLa_dIDR.tab COORD FullCO COMPLEX LENGTH -gtf /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf > UP_INTRONS_HeLa_dIDR.tab
+
+matt get_vast TMP_DOWN_INTRONS_HeLa_dIDR.tab COORD FullCO COMPLEX LENGTH -gtf /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf > DOWN_INTRONS_HeLa_dIDR.tab
+```
+
+Combine all exon tables into one single `MATT` input table.
+```{r}
+bind_rows(
+  read_delim(file = file.path(dse_dir_TAF2, 'UP_EXONS_HeLa_TAF2.tab'), delim = '\t', show_col_types = FALSE),
+  read_delim(file = file.path(dse_dir_TAF2, 'DOWN_EXONS_HeLa_TAF2.tab'), delim = '\t', show_col_types = FALSE),
+  read_delim(file = file.path(dse_dir_TAF2, 'UP_EXONS_HeLa_dIDR.tab'), delim = '\t', show_col_types = FALSE),
+  read_delim(file = file.path(dse_dir_TAF2, 'DOWN_EXONS_HeLa_dIDR.tab'), delim = '\t', show_col_types = FALSE),
+  read_delim(file = TAF2_MATT_CNTLR_EXONS_path, delim = '\t', show_col_types = FALSE)
+  ) |>
+  write_delim(file = file.path(dse_dir_TAF2, 'MATT_INPUT_EXONS_TAF2_HeLa.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+```
+
+Run the job in the cluster
+```{sh, eval = FALSE}
+qsub -q long-centos79,short-centos79 -V -cwd -pe smp 4 -terse \
+     -l virtual_free=12G -l h_rt=00:45:15 -N matt_exon_feat_taf2 -m ea -b y \
+     matt cmpr_exons MATT_INPUT_EXONS_TAF2_HeLa.tab START END SCAFFOLD STRAND GENEID \
+     /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf /no_backup/mirimia/genome_seqs/Hsa38_gDNA.fasta Hsap 150 \
+     GROUP[UP_EXONS_TAF2,DOWN_EXONS_TAF2,UP_EXONS_TAF2dIDR,DOWN_EXONS_TAF2dIDR,CR,CS,AS_NC] \
+     EXONS_FEATURES_HeLa -notrbts -colors:red,blue,red,blue,white,lightgray,darkgray
+```
+
+Combine all intron tables into one single `MATT` input table.
+```{r}
+bind_rows(
+  read_delim(file = file.path(dse_dir_TAF2, 'UP_INTRONS_HeLa_TAF2.tab'), delim = '\t', show_col_types = FALSE),
+  read_delim(file = file.path(dse_dir_TAF2, 'DOWN_INTRONS_HeLa_TAF2.tab'), delim = '\t', show_col_types = FALSE),
+  read_delim(file = file.path(dse_dir_TAF2, 'UP_INTRONS_HeLa_dIDR.tab'), delim = '\t', show_col_types = FALSE),
+  read_delim(file = file.path(dse_dir_TAF2, 'DOWN_INTRONS_HeLa_dIDR.tab'), delim = '\t', show_col_types = FALSE),
+  read_delim(file = TAF2_MATT_CNTLR_INTRONS_path, delim = '\t', show_col_types = FALSE)
+  ) |>
+  write_delim(file = file.path(dse_dir_TAF2, 'MATT_INPUT_INTRONS_TAF2_HeLa.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+```
+
+Launch the job on the cluster
+
+```{sh, eval = FALSE}
+qsub -q long-centos79,short-centos79 -V -cwd -pe smp 4 -terse \
+     -l virtual_free=12G -l h_rt=01:15:15 -N matt_intron_feat_taf2 -m ea -b y \
+     matt cmpr_introns MATT_INPUT_INTRONS_TAF2_HeLa.tab START END SCAFFOLD STRAND GENEID \
+     /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf /no_backup/mirimia/genome_seqs/Hsa38_gDNA.fasta Hsap 150 \
+     GROUP[UP_INTRONS_TAF2,DOWN_INTRONS_TAF2,UP_INTRONS_TAF2dIDR,DOWN_INTRONS_TAF2dIDR,CR,CS,AS_NC] \
+     INTRONS_FEATURES_HeLa -notrbts -colors:red,blue,red,blue,white,lightgray,darkgray
+```
+
+Read the pdf report from MATT.
+
+To easily import the results into R I remove the sequence from the `efeatures.tab` file with:
+
+```{sh, eval = FALSE}
+cd EXONS_FEATURES_HeLa
+cut -f 1-102 MATT_INPUT_EXONS_TAF2_HeLa_with_efeatures.tab > MATT_OUTPUT_EXONS_TAF2_HeLa_with_efeatures_NOSEQ.tab
+```
+
+```{sh, eval = FALSE}
+cd ../INTRONS_FEATURES_HeLa
+cut -f 1-71 MATT_INPUT_INTRONS_TAF2_HeLa_with_ifeatures.tab > MATT_OUTPUT_INTRONS_TAF2_HeLa_with_ifeatures_NOSEQ.tab
+```
+
+### Prepare SRRM2 exons and introns input for MATT
+
+```{r}
+SRRM2_UP_EX <- subset(DSE_SRRM2, AS_TYPE == 'Exon' & DIRECTION == 'UP') |>
+  select(!c(EXPERIMENT, AS_TYPE, Sample, PSI, dPSI_SRRM2_HeLa, dPSI_SRRM2_HeLa, Quality_Score_Value, DIRECTION)) |>
+  unique() |>
+  mutate(GROUP = 'UP_EXONS_HeLa_SRRM2-KD') # 380 exons
+
+SRRM2_DOWN_EX <- subset(DSE_SRRM2, AS_TYPE == 'Exon' & DIRECTION == 'DOWN') |>
+  select(!c(EXPERIMENT, AS_TYPE, Sample, PSI, dPSI_SRRM2_HeLa, dPSI_SRRM2_HeLa, Quality_Score_Value, DIRECTION)) |>
+  unique() |>
+  mutate(GROUP = 'DOWN_EXONS_HeLa_SRRM2-KD') # 444 exons
+```
+
+```{r}
+SRRM2_UP_IN <- subset(DSE_SRRM2, AS_TYPE == 'Intron' & DIRECTION == 'UP') |>
+  select(!c(EXPERIMENT, AS_TYPE, Sample, PSI, dPSI_SRRM2_HeLa, dPSI_SRRM2_HeLa, Quality_Score_Value, DIRECTION)) |>
+  unique() |>
+  mutate(GROUP = 'UP_INTRONS_HeLa_SRRM2-KD') # 164 exons
+
+SRRM2_DOWN_IN <- subset(DSE_SRRM2, AS_TYPE == 'Intron' & DIRECTION == 'DOWN') |>
+  select(!c(EXPERIMENT, AS_TYPE, Sample, PSI, dPSI_SRRM2_HeLa, dPSI_SRRM2_HeLa, Quality_Score_Value, DIRECTION)) |>
+  unique() |>
+  mutate(GROUP = 'DOWN_INTRONS_HeLa_SRRM2-KD') # 444 exons
+```
+
+Save to a temporary table.
+
+```{r}
+write_delim(x = SRRM2_UP_EX, file = file.path(dse_dir_SRRM2, 'TMP_UP_EXONS_HeLa_SRRM2-KD.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+
+write_delim(x = SRRM2_DOWN_EX, file = file.path(dse_dir_SRRM2, 'TMP_DOWN_EXONS_HeLa_SRRM2-KD.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+
+write_delim(x = SRRM2_UP_IN, file = file.path(dse_dir_SRRM2, 'TMP_UP_INTRONS_HeLa_SRRM2-KD.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+
+write_delim(x = SRRM2_DOWN_IN, file = file.path(dse_dir_SRRM2, 'TMP_DOWN_INTRONS_HeLa_SRRM2-KD.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+
+```
+
+Annotate these events with matt `get_vast`
+```{sh, eval = FALSE}
+cd ../SRRM2-KD/
+matt get_vast TMP_UP_EXONS_HeLa_SRRM2-KD.tab COORD FullCO COMPLEX LENGTH -gtf /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf > UP_EXONS_HeLa_SRRM2-KD.tab
+
+matt get_vast TMP_DOWN_EXONS_HeLa_SRRM2-KD.tab COORD FullCO COMPLEX LENGTH -gtf /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf > DOWN_EXONS_HeLa_SRRM2-KD.tab
+
+matt get_vast TMP_UP_INTRONS_HeLa_SRRM2-KD.tab COORD FullCO COMPLEX LENGTH -gtf /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf > UP_INTRONS_HeLa_SRRM2-KD.tab
+
+matt get_vast TMP_DOWN_INTRONS_HeLa_SRRM2-KD.tab COORD FullCO COMPLEX LENGTH -gtf /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf > DOWN_INTRONS_HeLa_SRRM2-KD.tab
+```
+
+Combine all exon tables into one table.
+```{r, prepare MATT input for exons in HeLa SRRM2 KD}
+bind_rows(
+  read_delim(file = file.path(dse_dir_SRRM2, 'UP_EXONS_HeLa_SRRM2-KD.tab'), delim = '\t', show_col_types = FALSE),
+  read_delim(file = file.path(dse_dir_SRRM2, 'DOWN_EXONS_HeLa_SRRM2-KD.tab'), delim = '\t', show_col_types = FALSE),
+  read_delim(file = SRRM2_MATT_CNTRLS_EXONS_path, delim = '\t', show_col_types = FALSE)
+  ) |>
+  write_delim(file = file.path(dse_dir_SRRM2, 'MATT_INPUT_EXONS_SRRM2_HeLa.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+```
+
+Run the job in the cluster
+```{sh, eval = FALSE}
+qsub -q long-centos79,short-centos79 -V -cwd -pe smp 4 -terse \
+     -l virtual_free=12G -l h_rt=00:30:15 -N matt_exon_features -m ea -b y \
+     matt cmpr_exons MATT_INPUT_EXONS_SRRM2_HeLa.tab START END SCAFFOLD STRAND GENEID \
+     /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf /no_backup/mirimia/genome_seqs/Hsa38_gDNA.fasta Hsap 150 \
+     GROUP[UP_EXONS_HeLa_SRRM2-KD,DOWN_EXONS_HeLa_SRRM2-KD,CR,CS,AS_NC] \
+     EXONS_FEATURES_HeLa -notrbts -colors:red,blue,white,lightgray,darkgray
+```
+
+Combine all intron tables into one table.
+```{r, prepare MATT input for introns in HeLa SRRM2 KD}
+bind_rows(
+  read_delim(file = file.path(dse_dir_SRRM2, 'UP_INTRONS_HeLa_SRRM2-KD.tab'), delim = '\t', show_col_types = FALSE),
+  read_delim(file = file.path(dse_dir_SRRM2, 'DOWN_INTRONS_HeLa_SRRM2-KD.tab'), delim = '\t', show_col_types = FALSE),
+  read_delim(file = SRRM2_MATT_CNTRLS_INTRONS_path, delim = '\t', show_col_types = FALSE)
+  ) |>
+  write_delim(file = file.path(dse_dir_SRRM2, 'MATT_INPUT_INTRONS_SRRM2_HeLa.tab'), 
+            delim = '\t', quote = 'none', col_names = TRUE)
+```
+
+Launch the job on the
+
+```{sh, eval = FALSE}
+qsub -q long-centos79,short-centos79 -V -cwd -pe smp 4 -terse \
+     -l virtual_free=12G -l h_rt=02:30:15 -N matt_intron_features -m ea -b y \
+     matt cmpr_introns MATT_INPUT_INTRONS_SRRM2_HeLa.tab START END SCAFFOLD STRAND GENEID \
+     /no_backup/mirimia/genome_annots/ensembl/Hsa38.gtf /no_backup/mirimia/genome_seqs/Hsa38_gDNA.fasta Hsap 150 \
+     GROUP[UP_INTRONS_HeLa_SRRM2-KD,DOWN_INTRONS_HeLa_SRRM2-KD,CR,CS,AS_NC] \
+     INTRONS_FEATURES_HeLa -notrbts -colors:red,blue,white,lightgray,darkgray
+```
+
+To easily import the results into R I remove the sequence from the `efeatures.tab` file with:
+
+```{sh, eval = FALSE}
+cd EXONS_FEATURES_HeLa
+cut -f 1-102 MATT_INPUT_EXONS_SRRM2_HeLa_with_efeatures.tab > MATT_OUTPUT_EXONS_SRRM2_HeLa_with_efeatures_NOSEQ.tab
+```
+
+
+```{sh, eval = FALSE}
+cd INTRONS_FEATURES_HeLa
+cut -f 1-71 MATT_INPUT_INTRONS_SRRM2_HeLa_with_ifeatures.tab > MATT_OUTPUT_INTRONS_SRRM2_HeLa_with_ifeatures_NOSEQ.tab
+```
+
+## Process MATT Analysis output
+
+Import exon features from `MATT` table output into `R` and process the results with a custom-made function I wrote.
+
+```{r, warning=FALSE, message=F}
+Ex_feat_TAF2 <- read_delim(file = exon_feat_path_TAF2, delim = "\t",
+                           escape_double = FALSE, trim_ws = TRUE,
+                           show_col_types = FALSE, col_names = TRUE) 
+
+Ex_feat_SRRM2 <- read_delim(file = exon_feat_path_SRRM2, delim = "\t",
+                            escape_double = FALSE, trim_ws = TRUE, 
+                            show_col_types = FALSE, col_names = TRUE) 
+
+EF_TAF2 <- process_exon_feats(data = Ex_feat_TAF2)
+
+EF_SRRM2 <- process_exon_feats(data = Ex_feat_SRRM2)
+```
+
+Combine the 2 dataset into one dataframe.
+```{r, combine matt output}
+EF_TAF2_SRRM2 <- rbind( EF_TAF2,  EF_SRRM2)
+```
+
+Keep only most important features to simplify the plot.
+
+```{r}
+LEN_feats <- c('UPEXON_MEDIANLENGTH', 'UPINTRON_MEDIANLENGTH', 'EXON_LENGTH', 'DOINTRON_MEDIANLENGTH', 'DOEXON_MEDIANLENGTH')
+GCC_feats <- c('UPEXON_GCC', 'UPINTRON_GCC', 'EXON_GCC', 'DOINTRON_GCC', 'DOEXON_GCC')
+MAX_ENT_SCR_feats <- c('MAXENTSCR_HSAMODEL_UPSTRM_5SS', 'MAXENTSCR_HSAMODEL_3SS', 
+                       'MAXENTSCR_HSAMODEL_5SS', 'MAXENTSCR_HSAMODEL_DOWNSTRM_3SS')
+EX_FEAT_SEL <- c(LEN_feats, GCC_feats, MAX_ENT_SCR_feats,
+                 'EXON_MEDIANRELATIVERANK', 
+                 'MEDIAN_POLYPYRITRAC_OFFSET_UPINTRON', 'MEDIAN_POLYPYRITRAC_OFFSET_DOINTRON',
+                 'BPSCORE_MAXBP_UPINTRON', 'BPSCORE_MAXBP_DOINTRON')
+```
+
+Reshape data.
+```{r}
+cmb_EF <- EF_TAF2_SRRM2 |>
+  subset( !CATEGORY %in% c('Ratio to Exon Length', 'Ratio to Exon GC %') ) |>
+  subset(EX_FEAT %in% EX_FEAT_SEL) |>
+  subset(GROUP != 'CS') |>
+  subset(GROUP != 'CR') |>
+  mutate(GROUP2 = GROUP) |>
+  mutate(GROUP2 = str_remove(pattern = 'HeLa_', string = GROUP2),
+         GROUP2 = str_remove(pattern = '-KD', string = GROUP2),
+         GROUP2 = str_replace(pattern = 'DOWN_', replacement = "D_", string = GROUP2),
+         GROUP2 = str_replace(pattern = 'UP_', replacement = "U_", string = GROUP2),
+         GROUP2 = str_replace(pattern = '_TAF2dIDR', replacement = "_dIDR", string = GROUP2),
+         GROUP2 = str_remove(pattern = 'EXONS_', string = GROUP2) )
+```
+
+Calculate a mean z-Score for each feature at different locations.
+
+```{r, mean zScore}
+GROUP2_fct <- rev(c("D_SRRM2", "D_dIDR",  "D_TAF2", "AS_NC", "U_SRRM2", "U_dIDR", "U_TAF2"))
+
+cmb_EF |>
+  group_by(CATEGORY, LOCATION, EX_FEAT, GROUP, GROUP2) |>
+  summarise(mean_zF_ASNC = mean(zF_ASNC, na.rm = TRUE), 
+            .groups = 'keep') |>
+   mutate(GROUP2 = factor(GROUP2, levels = GROUP2_fct) ) -> cmbnd_EF_cat
+```
+
+Select columns and prepare the dataset to run a non-parametric Wilcoxon test for each exon feature. It compares the `VALUE` (feature numeric values) between groups in `GROUP2` (type of feature) using `'AS_NC'` (alternatively spliced non changing exons) as the reference, then adjusts the *P* values with the `BH` (*Benjamini–Hochberg*) method and adds significance labels to the results.
+
+```{r, wilcox-test Exon features}
+cmb_EF |>
+  select(c(GROUP2, EVENT, EX_FEAT, VALUE)) |>
+  droplevels() |>
+  group_by(EX_FEAT) |>
+  wilcox_test(formula = VALUE ~ GROUP2, ref.group = 'AS_NC', alternative = "two.sided", 
+         paired = F, p.adjust.method = 'none', conf.level = 0.95, detailed = F) |>
+  adjust_pvalue(method = "BH") |> add_significance("p.adj") -> res_test_EF
+```
+
+Reshape test results dataframe for plot. Remove non significant (`ns`) features.
+
+```{r, tidy test results}
+tidy_res_test_EF <- subset(res_test_EF, p.adj.signif != 'ns') |>
+  select(EX_FEAT, group2, p, p.adj, p.adj.signif) |>
+  process_exon_feats_test() |>
+  subset( !CATEGORY %in% c('Ratio to Exon Length', 'Ratio to Exon GC %') ) 
+message('Number of significant features: ', nrow(tidy_res_test_EF) )
+```
+
+## Plot Exon Features Heatmap
+
+Here `facet_row` splits the plot into multiple rows, with each row representing a different level of the `CATEGORY` variable. It also allows each row to have its own x-axis scale and custom labels (via `labeller`) for clearer facet titles.
+
+```{r, fig.width = 8, fig.height = 3}
+ggplot(cmbnd_EF_cat) +
+  aes(x = LOCATION, y = GROUP2) +
+  facet_row( ~CATEGORY, scales = 'free_x', space = "free",
+             labeller = labeller(CATEGORY = c("S.S. Score" = "Max Entropy Score",
+                                              "Poly Y Track" = "PYT offset\nfrom 3'ss",
+                                              "Branch Point" = "Branch Point\nScore",
+                                              "Rel. Position" = "Rel.\nPosition")
+                                 ) ) +
+  geom_tile(aes(fill = mean_zF_ASNC), colour = 'black') +
+  # Add significance annotations from tidy_res_test_EF:
+  geom_text(data = tidy_res_test_EF, inherit.aes = F, 
+            mapping = aes(x = LOCATION, y = group2, label = p.adj.signif),
+            size = 2, color = "black", vjust = 0.75) +
+  scale_fill_gradient2(low = 'dodgerblue3', mid = 'white', high = 'firebrick3', 
+                       midpoint = 0, name = 'Feature Mean Z-Score', na.value = 'gray') +
+  scale_x_discrete(expand = expansion(mult = 0, add = 0)) +
+  scale_y_discrete(expand = expansion(mult = 0, add = 0)) +
+  coord_cartesian(clip = 'off') +
+  guides(
+    fill = guide_colourbar(
+      barheight = unit(2.5, units = "mm"),
+      barwidth = unit(8, units = "cm"),
+      title.vjust = 1 ) ) +
+  theme(axis.text = element_text(colour = 'black', family = 'Arial'),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        strip.background = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank(),
+        plot.background = element_blank(),
+        legend.position = 'bottom')  -> p_heatmap
+p_heatmap
+```
+
+Save to pdf and improve in Illustrator.
+```{r}
+ggsave(filename = 'Fig_6H_EX_FEATURES_HM.pdf', plot = p_heatmap, 
+       device = cairo_pdf, path = pdf_dir_fig, units = 'cm', width = 16,
+       height = 7)
+```
+
+End of the analysis.
+
+# Session Info {#sec-sessioninfo}
+
+```{r, print session info}
+sessioninfo::session_info()
+```
+
+## Quarto
+
+This document is generated using Quarto which enables to weave together content and executable code into a finished document. This is an improved version of what used to be called 'Rmarkdown'. The document hides all code chunks, but they can be opened up with the drop down arrow. On the top right corner there's a toggle for dark-mode. To learn more about Quarto see [here](https://quarto.org).

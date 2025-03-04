@@ -23,17 +23,15 @@ Alternative splicing (AS) events included in this analysis:
 
 1.  alternatively spliced exons and microexons
 
-2.  alternative splice sites (acceptor at 3' and donor at 5')
+2.  intron retention
 
-3.  intron retentions
+3.  alternative splice sites (acceptor at 3' and donor at 5')
 
 For each sample AS events were quantified using the percentage of sequence inclusion (PSI) metric, which is a number ranging from zero to 100, corresponding to full sequence skipping or full sequence inclusion in all transcripts of a gene, respectively. For example, constitutively spliced exons have a PSI of 100. The PSI cannot be calculated for the very first and last exons of a gene.
 
-These documents reports the RNA-seq downstream AS analysis after processing the samples with VAST-TOOLS[@Tapial2017] for SRRM2 Knockdown (KD) in HeLa[@Zhang2024] and HepG2[@Cui2023] cells.
+These documents reports the RNA-seq downstream AS analysis after processing the samples with VAST-TOOLS[@Tapial2017] for SRRM2 Knockdown (KD) in HeLa[@Zhang2024] (Bo Wang lab) and HepG2[@Cui2023] (Ben Blewncowe, Alan Lambowitz & Paul Schimmel) cells.
 
-## Quarto
-
-This document is generated using Quarto which enables to weave together content and executable code into a finished document. This is an improved version of what used to be called 'Rmarkdown'. The document hides all code chunks, but they can be opened up with the drop down arrow. On the top right corner there's a toggle for dark-mode. To learn more about Quarto see [here](https://quarto.org).
+Last code execution: `r format(Sys.time(), '%Y %B %d, %A @ %H:%m:%S')`.
 
 # FASTQ files processing
 
@@ -59,7 +57,7 @@ All individual replicates and the merged super samples were combined with `vast-
 
 ## compare
 
-To calculate the differential inclusion level (∆PSI) between samples the combined table was processed with `vast-tools compare` using the HeLa FRT samples as control (`-a`) and the following filtering parameters: `--min_dPSI 15`, `--min_range 0`, `--max_dPSI 5`, `--print_sets`, `--noB3`, `--p_IR`, `--print_dPSI`, and `--GO`. HeLa TAF2 OE and NLS-TAF2 ∆IDR OE were each compared to the control separately. The comparison was done using the 3 individual replicates per condition or by using only the merged super sample. This is denoted in the file names as `_uniq_` or `_mrgd_`.
+To calculate the differential inclusion level (∆PSI) between samples the combined table was processed with `vast-tools compare` using the knock down control samples (`-a`) and the following filtering parameters: `--min_dPSI 15`, `--min_range 0`, `--max_dPSI 5`, `--print_sets`, `--noB3`, `--p_IR`, `--print_dPSI`, and `--GO`. The HeLa and HepG2 knock downs were each compared to the respective controls separately. The comparison was done using the 3 individual replicates per condition or by using only the merged super sample. This is denoted in the file names as `_uniq_` or `_mrgd_`.
 
 ## tidy
 
@@ -114,7 +112,7 @@ According to Bayes' theorem, our prior beliefs about PSI are updated based on ob
 
 If replicates are available, joint posterior distributions for a sample are estimated from sampling empirical posterior distributions of the replicates and fitting a new posterior Beta with maximum likelihood estimation (MLE) using the `MASS::fitdist` function in `R`. This basically means combining the information from multiple replicates to get a more robust estimate of the PSI. The statistical significance between two biological conditions, defined as the level of confidence in determining whether two posterior PSI distributions are significantly different from each other, modelled as two posterior distributions X\~ Beta, and Y \~ Beta, is calculated as P(X -- Y \> 0), i.e., X is higher than Y. This probability can be estimated from the difference of empirical distributions sampled between X and Y such that P(X -- Y \> 0) =$\sum_{i=1}^{n} (Xi –Yi > 0) / N$. Lastly, significantly differential events were additionally required to have a PSI difference \> 10.
 
-Using the `diff` module of vast-tools filter for events with a Minimum Value (MV) of \|∆PSI\| at 95% confidence \>= 15%. This means that each event as a 95% probability to have a \|∆PSI\| between the 2 conditions higher or equal to 15% (MV).
+Using the `diff` module of vast-tools filter for events with a Minimum Value (MV) of \|∆PSI\| at 95% confidence \>= 15%. This means that each event as a 95% probability to have a \|∆PSI\| between the 2 conditions higher or equal to the minimum value, which is 15% ∆PSI.
 
 # Set up
 
@@ -131,11 +129,9 @@ library(UpSetR)
 library(viridis)
 library(rstatix)
 library(Cairo)
-library(patchwork)
-library(crayon)
 ```
 
-In addition I developed an `R` package called `niar` to stream line some of the common analysis steps. It can be installed from [my GitHub repository](https://github.com/Ni-Ar/niar) using:
+In addition, I developed an `R` package called `niar` to stream line some of the common analysis steps. It can be installed from [my GitHub repository](https://github.com/Ni-Ar/niar) using:
 
 ```{r, install niar package, eval = FALSE, message = FALSE, warning = FALSE}
 devtools::install_github("Ni-Ar/niar")
@@ -145,7 +141,14 @@ library(niar)
 Here I load the package from my local repository with:
 
 ```{r, load niar package, message = FALSE, warning = FALSE}
-devtools::load_all(path = '~/mnt/narecco/software/R/niar')
+local <- FALSE
+if(local) {
+    devtools::load_all(path = '~/mnt/narecco/software/R/niar')
+} else if (local == FALSE) {
+     devtools::load_all(path = '~/software/R/niar')
+} else {
+  stop('local is not a Logical')
+}
 ```
 
 ## Functions
@@ -159,10 +162,11 @@ quality_score_values <- c("N", "VLOW", "LOW", "OK", "SOK")
 names(quality_score_colors) <- quality_score_values
 ```
 
-Tanja's conditions colour palette
+SRRM2-KD palette
+
 ```{r}
-sample_palette <- c('#009900',  '#663399', '#FFCC33')
-names(sample_palette) <- c('TAF2', 'TAF2∆IDR', 'NLS-TAF2∆IDR')
+sample_palette <- c('#ffb703',  '#219ebc')
+names(sample_palette) <- c('HeLa', 'HepG2')
 ```
 
 *Some generic functions I wrote for this analysis*:
@@ -185,15 +189,16 @@ plot_dPSI_hist_grpd <- function(data, xlim = c(-60, 60) ) {
     select(dPSI, COMPLEX, comparison) |>
     mutate(TYPE = case_when(COMPLEX %in% exon_type ~ 'Exon',
                             COMPLEX %in% intron_type ~ 'Intron',
-                            COMPLEX %in% alt_ss ~ 'alt. splice site',
+                            COMPLEX %in% alt_ss ~ 'Alt. s.s.',
                             ) ) |>
-    subset( !COMPLEX %in% c('Alt3', 'Alt5') ) |>
+    # subset( !COMPLEX %in% c('Alt3', 'Alt5') ) |>
+    mutate(TYPE = factor(TYPE, levels = c('Exon', 'Intron', 'Alt. s.s.'))) |>
     unique() |>
     ggplot() +
       aes(x = dPSI, fill = dPSI > 0 ) +
       facet_grid(TYPE ~ comparison, scales = 'free_x',
-                 labeller = labeller(comparison = c(TAF2dIDR = 'NLS-TAF2 ∆IDR',
-                                                    TAF2 = 'TAF2') ) ) +
+                 labeller = labeller(comparison = c(HeLa_SRRM2KD_mrgd = 'HeLa SRRM2 KD',
+                                                    HepG2_SRRM2KD_mrgd = 'HepG2 SRRM2 KD') ) ) +
       geom_histogram(binwidth = 1, show.legend = F) +
       scale_x_continuous(n.breaks = 10) +
       scale_y_continuous(n.breaks = 4, expand = expansion(mult = c(0, 0.01))) +
@@ -248,7 +253,7 @@ plot_quality_score_stacked <- function(data) {
 
 Wrapper to explore the PSI and quality scores of specific events.
 ```{r, generic PSI plotting function}
-plot_PSI_boxplot <- function(df, num_col = 5, order_by_dPSI = T) {
+plot_PSI_boxplot <- function(df, num_col = 5, order_by_dPSI = TRUE, legend_xy =  c(0.93, 0.1) ) {
 
   if (order_by_dPSI) {
     df <- df |>
@@ -261,15 +266,16 @@ plot_PSI_boxplot <- function(df, num_col = 5, order_by_dPSI = T) {
   }
   
   ggplot(df) +
-    aes(x = OE, y = PSI) +
+    aes(x = PrettyGroup, y = PSI) +
     facet_wrap( ~ GENE + EVENT, scales = "free_x", ncol = num_col) +
     geom_boxplot(fill = NA, outlier.shape = NA, lwd = 0.2) +
-    geom_point(aes(fill = Quality_Score_Value, shape = Replicate),
-               size = 1.5, stroke = 0.2, 
-               position = position_dodge(width = 0.5)) +
-    scale_shape_manual(values = c('Merge' = 22, 'A' = 21, 'B' = 21, 'C' = 21)) +
+    geom_point( aes(fill = Quality_Score_Value, shape = Replicate),
+               size = 1.5, stroke = 0.2, position = position_dodge(width = 0.5)) +
+    scale_shape_manual(values = c('Merge' = 22, 'A' = 21, 'Aa' = 21, 'Ab' = 21,
+                                  'B' = 21, 'Ba' = 21, 'Bb' = 21, 
+                                  'C' = 21, 'Ca' = 21, 'Cb' = 21 ) ) +
     scale_fill_manual(values = quality_score_colors, name = "Quality\nScore") +
-    scale_x_discrete(labels = c('FRT' = 'Cntrl', 'TAF2' = 'TAF2', 'NLSTAF2dIDR' = 'NLS-TAF2∆IDR') ) +
+    scale_x_discrete(labels = \(x) gsub(pattern = '_', replacement = '\n', x) ) +
     scale_y_continuous(breaks = seq(0, 100, 10), 
                        expand = expansion(mult = 0, add = 2)) +
     guides(fill = guide_legend(override.aes = list(shape = 21)),
@@ -284,7 +290,8 @@ plot_PSI_boxplot <- function(df, num_col = 5, order_by_dPSI = T) {
           strip.text = element_text(vjust = 1, lineheight = 0, 
                                     margin = margin(t = 0, unit = 'mm')),
           panel.grid.major = element_line(colour = 'gray84', linewidth = 0.15),
-          legend.position = c(0.93, 0.1) ) 
+          legend.position = 'inside',
+          legend.position.inside = legend_xy ) 
 }
 ```
 
@@ -323,12 +330,77 @@ zMad <- function(mat) {
 # zScore(mat)
 ```
 
+Function I wrote to make sure alternative donors and acceptors are not repeated between up and down regulated sets (used in tidy analysis).
+
+```{r, function to match alternative splice sites}
+#' Match Alternative 3' or 5' Splice Site IDs
+#'
+#' This function takes two sets of upregulated and downregulated alternative 3' or 5' splice site IDs 
+#' (VAST-TOOLS format) and resolves them by ensuring the IDs are correctly matched, taking into account 
+#' variations in the alternative splicing.
+#'
+#' @param up_ids A character vector of upregulated splice site IDs (VAST-TOOLS format).
+#' @param do_ids A character vector of downregulated splice site IDs (VAST-TOOLS format).
+#' @return A character vector of resolved and unique splice site IDs.
+#' @examples
+#' up_ids <- c("HsaALTA0001463-1/2", "HsaALTA0006052-1/2", "HsaALTA0006256-2/2",
+#'             "HsaALTA1001090-3/3", "HsaALTA1015934-2/4")
+#' do_ids <- c("HsaALTA0001463-2/2", "HsaALTA0001572-1/5", "HsaALTA0006052-2/2",
+#'              "HsaALTA0006256-1/2", "HsaALTA0007106-4/5", "HsaALTA0008669-2/4", "HsaALTA1001090-2/3")
+#' match_alt35_id(up_ids, do_ids)
+#' # Returns: "HsaALTA0001463-1/2" "HsaALTA0006052-1/2" "HsaALTA0006256-2/2"
+#' #          "HsaALTA1001090-3/3" "HsaALTA1015934-2/4" "HsaALTA0001572-1/5" 
+#' #          "HsaALTA0007106-4/5" "HsaALTA0008669-2/4"
+match_alt35_id <- function(up_ids, do_ids) {
+  # Calculate the number of unique IDs combining both upregulated and downregulated sets
+  all_up_do_ids_len <- length(unique(c(up_ids, do_ids)))
+  
+  # Remove specific splice variation suffix (-x/y) and then calculate the number of unique IDs
+  sam_up_do_ids_len <- length(unique(c(str_remove(string = up_ids, pattern = '\\-[1-9]/[1-9]'),
+                                       str_remove(string = do_ids, pattern = '\\-[1-9]/[1-9]'))))
+  
+  # Case 1: If the number of unique IDs remains the same after removing variations, return the unique set
+  if (all_up_do_ids_len == sam_up_do_ids_len) {
+    return(unique(c(up_ids, do_ids)))
+  } 
+  # Case 2: If the number of unique IDs differs, identify and filter specific splice IDs
+  else if (all_up_do_ids_len > sam_up_do_ids_len) {
+    
+    # Check if the downregulated set has more or equal IDs compared to the upregulated set
+    if (length(do_ids) >= length(up_ids)) {
+      # Identify and retain downregulated splice IDs that do not match upregulated IDs without the suffix
+      indx_do_ids <- which(!str_remove(string = do_ids, pattern = '\\-[1-9]/[1-9]') %in%
+                           str_remove(string = up_ids, pattern = '\\-[1-9]/[1-9]'))
+      do_ids <- do_ids[indx_do_ids]
+      return(unique(c(up_ids, do_ids)))
+    }
+    
+    # Check if the upregulated set has more or equal IDs compared to the downregulated set
+    if (length(up_ids) >= length(do_ids)) {
+      # Identify and retain upregulated splice IDs that do not match downregulated IDs without the suffix
+      indx_up_ids <- which(!str_remove(string = up_ids, pattern = '\\-[1-9]/[1-9]') %in%
+                           str_remove(string = do_ids, pattern = '\\-[1-9]/[1-9]'))
+      up_ids <- up_ids[indx_up_ids]
+      return(unique(c(up_ids, do_ids)))
+    }
+  }
+}
+```
+
+
 ## File paths
 
 Files and directories paths. All files are backed-up on the CRG cluster.
 
 ```{r, projects paths}
-proj_dir <- file.path('~/mnt/narecco/projects/01_ALTdemix')
+if(local) {
+    proj_dir <- file.path('~/mnt/narecco/projects/01_ALTdemix')
+} else if (local == FALSE) {
+    proj_dir <- file.path('~/projects/01_ALTdemix')
+} else {
+    stop('local is not a Logical')
+}
+proj_dir <- normalizePath(proj_dir)
 expr_dir <- file.path(proj_dir, 'data/INCLUSION_tbl/Tanja')
 vast_tools_dir <- file.path(expr_dir, 'vast_tools')
 vast_out <- file.path(expr_dir, 'vast_tools/vast_out')
@@ -352,13 +424,15 @@ diff_HepG2_SRRM2_path <- file.path(diff_dir, 'HepG2_SRRM2KD_minRead10_noB3_pIR_f
 plot_dir <- file.path(expr_dir, 'plots/SRRM2')
 if ( !dir.exists(plot_dir) ) { dir.create(path = plot_dir, recursive = T) }
 
-dse_IDs_dir <- file.path(expr_dir, 'diff_spliced_IDs')
+dse_IDs_dir <- file.path(expr_dir, 'diff_spliced_IDs/SRRM2-KD')
 if ( !dir.exists(dse_IDs_dir) ) { dir.create(path = dse_IDs_dir, recursive = T) }
 ```
 
 # Differential splicing analysis
 
 Select the differentially spliced events based on the 3 different methods described above. This is the core part of this report.
+
+## Effect size method (compare)
 
 Import all the tables from the `vast-tools compare` analysis in a list.
 
@@ -368,20 +442,20 @@ list.files(cmpr_dir, full.names = T, pattern = '^He.*SRRM2.*_noB3_pIR.tab$') |>
     read_vst_tbl(path = x, show_col_types = FALSE) |>
       tidy_vst_psi() |>
       mutate(comparison = gsub(pattern = '_noB3_pIR.tab', replacement = '', x) ) |>
-      mutate(comparison = gsub(pattern = '\\/Users*.*dPSI5\\/', replacement = '', comparison) ) |>
+      mutate(comparison = gsub(pattern = paste0(cmpr_dir, '/'), replacement = '', comparison) ) |>
       mutate(comparison = gsub(pattern = "vs_CNTRL_", replacement = '', comparison) ) |>
-      mutate(CellType = str_extract(pattern = "(HepG2|HeLa)", string =  comparison) )
+      mutate(CellType = str_extract(pattern = "^(HepG2|HeLa)", string =  Sample) )
       # mutate(comparison = gsub(pattern = "(HepG2|HeLa)_", replacement = '', comparison) ) |>
   }) -> list_compares
 ```
 
-Bind the list of dataframes into one single dataframe.
+Bind the list of data frames into one single data frame.
 
 ```{r, unify all comparisons into one df}
 cmpr_events <- do.call('rbind', list_compares) 
 ```
 
-Create a metadata dataframe from the samples' names.
+Create a metadata data frame from the samples' names.
 
 ```{r, create a metadata}
 cmpr_events |>
@@ -391,14 +465,24 @@ cmpr_events |>
   mutate(KD = str_remove(string = KD, pattern = '(HepG2|HeLa)_') ) |>
   mutate(Replicate = str_split_fixed(string = Sample, pattern = "_", n = 3)[,3]) |>
   mutate(Replicate = ifelse(Replicate == '', yes = 'Merge', no = Replicate ) ) |>
-  mutate(PrettySample = str_remove(string = Sample, pattern = '(HepG2|HeLa)_') ) -> mtdf
+  mutate(PrettySample = str_remove(string = Sample, pattern = '(HepG2|HeLa)_') ) |>
+  mutate(PrettyGroup = str_remove(string = Sample, pattern = '_[aA-cC].$'),
+         PrettyGroup = str_remove(string = PrettyGroup, pattern = '_(A|B|C)$') ) |>
+  mutate(PrettyGroup = factor(PrettyGroup, 
+                              levels = c("HeLa_CNTRL", "HeLa_SON", "HeLa_SRRM2",
+                                         "HepG2_CNTRL", "HepG2_MARS", 
+                                         "HepG2_RARS", "HepG2_SRRM2") ) ) |>
+  relocate(PrettySample, PrettyGroup, .after = Sample) |>
+  # drop comparison column
+  select( !c(comparison) ) |>
+  unique() -> mtdf
 ```
 
 Add metadata info to the compared events table.
 
 ```{r, add metadata to compare events}
-cmpr_events <- cmpr_events |>
-  left_join(y = mtdf, by = join_by(Sample, comparison, CellType) ) 
+cmpr_events <- left_join(x = cmpr_events, y = mtdf, 
+                         by = join_by(Sample, CellType) ) 
 ```
 
 ### Events coverage QC
@@ -518,10 +602,52 @@ lapply( list_compares, function(x){
 
 # find events that are mis-spliced in all 4 comparisons
 # all_common_DSE_ids <- Reduce(intersect, lapply(diff_events_li, function(x) x$EVENT ) )
+
+# find the HeLa events mis-spliced in both the merged supersample and the individual replicates
 HeLa_common <- Reduce(intersect, lapply(diff_events_li[1:2], function(x) x$EVENT ) )
+
+# find the HepG2 events mis-spliced in both the merged supersample and the individual replicates
 HepG2_common <- Reduce(intersect, lapply(diff_events_li[3:4], function(x) x$EVENT ) )
-message('Number of common DSE between HeLa and HepG2: ', length(intersect(x = HeLa_common, y = HepG2_common)), " !")
+
+message('Number of DSE (uniq & mrgd) common between HeLa and HepG2: ', length(intersect(x = HeLa_common, y = HepG2_common)), " !")
 ```
+
+This is because some events are lost in the `uniq` comparison type. If I check only between HeLa and HepG2 supersamples.
+
+```{r}
+HeLa_HepG2_mrgd_common <- Reduce(intersect, lapply( diff_events_li[c(1,3)] , function(x) x$EVENT ) )
+
+message('Number of DSE (mrgd) common between HeLa and HepG2: ', length(HeLa_HepG2_mrgd_common), " !")
+```
+ Check some of them:
+ 
+```{r, some PSI of common events, fig.width = 10, fig.height = 6}
+set.seed(9)
+subset(fltrd_cmpr_events, EVENT %in% sample(HeLa_HepG2_mrgd_common, 9) )  |>
+  subset(PrettyGroup %in% c('HeLa_CNTRL', 'HeLa_SRRM2', 'HepG2_CNTRL', 'HepG2_SRRM2') ) |>
+  plot_PSI_boxplot(order_by_dPSI = T) -> p_examples
+
+p_examples
+ggsave(filename = '03_HeLa_HepG2_Examples_PSI_Changes_Barplot.pdf', plot = p_examples, 
+       device = cairo_pdf, path = plot_dir, units = 'cm', width = 27,
+       height = 10)
+```
+
+Some ∆PSI are not in the same direction when comparing the HeLa and HepG2 cells.
+
+Check the events in the SRRM2 gene.
+
+```{r, SRRM2 events PSI, fig.width = 4, fig.height = 3  }
+subset(fltrd_cmpr_events, GENE == 'SRRM2' )  |>
+  subset(PrettyGroup %in% c('HeLa_CNTRL', 'HeLa_SRRM2', 'HepG2_CNTRL', 'HepG2_SRRM2') ) |>
+  plot_PSI_boxplot(legend_xy = c(0.9, 0.7))
+
+ggsave(filename = '04_HeLa_HepG2_SRRM2_PSI_Changes_Barplot.pdf', plot = last_plot(), 
+       device = cairo_pdf, path = plot_dir, units = 'cm', width = 14,
+       height = 6)
+```
+
+The exon seem to make sense. The intronic event if it's more included in the KD in HeLa would likely contribute to NMD. This is very likely a casa in high the intron of SRRM2 is regulated by SRRM2 itself to auto-regulate its abundance.
 
 Make a list of different compare sets of DSEs
 
@@ -539,6 +665,11 @@ names(events_li) <- comparisons
 lapply(events_li, head, 3)
 ```
 
+How many events in each group?
+```{r}
+lapply(events_li, length)
+```
+
 To show how many AS events are differentially spliced in each condition taking into consideration the replicates or the super sample, calculate the intersections between all 4 comparisons.
 
 ```{r, make upset plot all interactions}
@@ -551,20 +682,20 @@ intersection_cmpr_plt <- upset(fromList(events_li), nsets = length(comparisons),
 
 Show the overlap as an upset plot:
 
-```{r, show_upset_plot_all, fig.width = 12, fig.height = 6}
+```{r, show_upset_plot_all, fig.width = 8, fig.height = 5}
 intersection_cmpr_plt
 ```
 
 The plot above shows all possible intersections between the 4 groups. 
 
-The weird result is that there's a very small if no overlap between the knockdown in HeLa or HepG2 cells!! This requires further exploration.
+The weird result is that there's a very small between the knockdown in HeLa or HepG2 cells!! This requires further exploration.
 
 Because the super samples (defined with `_mrgd`) are the sum of all the 3 individual replicates, they have more coverage and can better quantify exon-exon-junction reads. This explains the increased in number of DSEs. 
 
 Save the upset plot to pdf.
 
 ```{r, save upset plot all interactions, message = FALSE, warning = FALSE}
-cairo_pdf(file = file.path(plot_dir, '03_overlap_fltrd_compare_DSE_Upset.pdf'), 
+cairo_pdf(file = file.path(plot_dir, '05_overlap_fltrd_compare_DSE_Upset.pdf'), 
           width = 6.5, height = 4, bg = NA)
 intersection_cmpr_plt
 dev.off()
@@ -573,14 +704,18 @@ dev.off()
 Separate the parts of the dataframe by the cell type to look at the ∆PSI of the `mrgd` super samples. 
 
 ```{r, select only HeLa comparison }
-cmpr_events_HeLa <- subset(fltrd_cmpr_events, comparison == 'HeLa_SRRM2KD_mrgd') 
+cmpr_events_HeLa <- subset(fltrd_cmpr_events, comparison == 'HeLa_SRRM2KD_mrgd') |>
+  subset( grepl(pattern = '(CNTRL|SRRM2)', x = Sample, perl = T) ) |>
+  subset( grepl(pattern = '^HeLa_', x = Sample, perl = T) )
 ```
 
 ```{r, select only HepG2 comparison}
-cmpr_events_HepG2 <- subset(fltrd_cmpr_events, comparison == 'HepG2_SRRM2KD_mrgd') 
+cmpr_events_HepG2 <- subset(fltrd_cmpr_events, comparison == 'HepG2_SRRM2KD_mrgd') |>
+  subset( grepl(pattern = '(CNTRL|SRRM2)', x = Sample, perl = T) ) |>
+  subset( grepl(pattern = '^HepG2_', x = Sample, perl = T) )
 ```
 
-Check the overall quality / confidence of the `uniq` and `mrgd` events.
+Check the overall quality / confidence of the `mrgd` events. This plot should be improved.
 
 ```{r, plot_event_quality_score, fig.height = 9, fig.width = 7}
 plot_quality_score_stacked(cmpr_events_HeLa) +
@@ -596,9 +731,9 @@ p_cmrp_scores_bar
 The different numbers of events tend to be similar except maybe for intron retentions and simple exon skipping that have opposite trends. Save bar plot.
 
 ```{r, export cmpr event mrgd score plot HeLa and HepG2, fig.width = 5, fig.height = 4}
-ggsave(filename = '04_Compare_DSE_Score_Bar.pdf', plot = p_cmrp_scores_bar, 
+ggsave(filename = '06_Compare_DSE_Score_Bar.pdf', plot = p_cmrp_scores_bar, 
        device = cairo_pdf, path = plot_dir, units = 'cm', width = 7,
-       height = 6.5)
+       height = 8)
 ```
 
 Check the distribution of ∆PSI using a histogram with binwidth of 1. The top part are all differentially spliced exons (`S`, `C1`, `C2`, and `C3`), while the bottom part are the intron retentions (`IR`).
@@ -615,26 +750,1566 @@ p_cmpr_dPSI_hist <- wrap_plots(hist_list, byrow = F, heights = c(1, 1) )
 p_cmpr_dPSI_hist
 ```
 
-The breath of the ∆PSI of the up-regulated exons is somewhat comparable, however the number of downregulated exons in HepG2 is way lower than what detected in HeLa. 
-Importantly the HepG2 cells have many less retained introns upon SRRM2 KD, which is not observed to the same extent in HeLa cells. Save histogram plot.
+The breath of the ∆PSI of the up-regulated exons is somewhat comparable, however the number of down-regulated exons in HepG2 is way lower than what detected in HeLa. 
+The HepG2 cells have many less retained introns upon SRRM2 KD, which is not observed to the same extent in HeLa cells. Save histogram plot.
 
 ```{r, export cmpr dpsi histogram plot}
-ggsave(filename = '05_compare_DSE_dPSI_Hist.pdf', plot = p_cmpr_dPSI_hist, 
+ggsave(filename = '07_compare_DSE_dPSI_Hist.pdf', plot = p_cmpr_dPSI_hist, 
        device = cairo_pdf, path = plot_dir, units = 'cm', width = 10,
+       height = 12)
+```
+
+*Select events that are differentially spliced using the comparison method*
+
+I select all the events in the `mrgd` super samples are differentially spliced events, defined as: `|∆PSI| >= 15`.
+
+Separate between the exons, introns, and alternative splice sites that are up or down spliced in SRRM2 KD in HeLa.
+
+```{r, get IDs of up and down exons cmpr method HeLa}
+cmpr_events_HeLa |>
+  subset(abs(dPSI) >= 15 ) |>
+  select(GENE, EVENT, dPSI) |>
+  unique() |>
+  arrange(desc(dPSI)) -> cmpr_HeLa
+
+up_cmpr_HeLa <- subset(cmpr_HeLa, dPSI >= 0)
+do_cmpr_HeLa <- subset(cmpr_HeLa, dPSI <= 0)
+
+EX_up_cmpr_HeLa <- grep(pattern = "^HsaEX", x = up_cmpr_HeLa$EVENT, value = T)
+EX_do_cmpr_HeLa <- grep(pattern = "^HsaEX", x = do_cmpr_HeLa$EVENT, value = T)
+
+IN_up_cmpr_HeLa <- grep(pattern = "^HsaINT", x = up_cmpr_HeLa$EVENT, value = T)
+IN_do_cmpr_HeLa <- grep(pattern = "^HsaINT", x = do_cmpr_HeLa$EVENT, value = T)
+
+A3_up_cmpr_HeLa <- grep(pattern = "^HsaALTA", x = up_cmpr_HeLa$EVENT, value = T)
+A3_do_cmpr_HeLa <- grep(pattern = "^HsaALTA", x = do_cmpr_HeLa$EVENT, value = T) # empty
+
+A3_cmpr_HeLa <- match_alt35_id(up_ids = A3_up_cmpr_HeLa, do_ids = A3_do_cmpr_HeLa)
+
+A5_up_cmpr_HeLa <- grep(pattern = "^HsaALTD", x = up_cmpr_HeLa$EVENT, value = T)
+A5_do_cmpr_HeLa <- grep(pattern = "^HsaALTD", x = do_cmpr_HeLa$EVENT, value = T) # empty
+
+A5_cmpr_HeLa <- match_alt35_id(up_ids = A5_up_cmpr_HeLa, do_ids = A5_do_cmpr_HeLa)
+
+message('HeLa SRRM2 KD:',
+        '\nUP Exon: ', length(EX_up_cmpr_HeLa),
+        '\nDOWN Exon: ', length(EX_do_cmpr_HeLa),
+        '\nUP Intron: ', length( IN_up_cmpr_HeLa),
+        '\nDOWN Intron: ', length( IN_do_cmpr_HeLa),
+        "\nDifferentially spliced 3' splice sites: ", length(A3_cmpr_HeLa),
+        "\nDifferentially spliced 5' splice sites: ", length(A5_cmpr_HeLa) )
+```
+
+Separate between the exons, introns, and alternative splice sites that are up or down spliced in SRRM2 KD in HepG2.
+
+```{r, get IDs of up and down exons cmpr method HepG2}
+cmpr_events_HepG2 |>
+  subset(abs(dPSI)  >= 15 ) |>
+  select(GENE, EVENT, dPSI) |>
+  unique() |>
+  arrange(desc(dPSI)) -> cmpr_HepG2
+
+up_cmpr_HepG2 <- subset(cmpr_HepG2, dPSI >= 0)
+do_cmpr_HepG2 <- subset(cmpr_HepG2, dPSI <= 0)
+
+EX_up_cmpr_HepG2 <- grep(pattern = "^HsaEX", x = up_cmpr_HepG2$EVENT, value = T)
+EX_do_cmpr_HepG2 <- grep(pattern = "^HsaEX", x = do_cmpr_HepG2$EVENT, value = T)
+
+IN_up_cmpr_HepG2 <- grep(pattern = "^HsaINT", x = up_cmpr_HepG2$EVENT, value = T)
+IN_do_cmpr_HepG2 <- grep(pattern = "^HsaINT", x = do_cmpr_HepG2$EVENT, value = T)
+
+A3_up_cmpr_HepG2 <- grep(pattern = "^HsaALTA", x = up_cmpr_HepG2$EVENT, value = T)
+A3_do_cmpr_HepG2 <- grep(pattern = "^HsaALTA", x = do_cmpr_HepG2$EVENT, value = T) # empty
+
+A3_cmpr_HepG2 <- match_alt35_id(up_ids = A3_up_cmpr_HepG2, do_ids = A3_do_cmpr_HepG2)
+
+A5_up_cmpr_HepG2 <- grep(pattern = "^HsaALTD", x = up_cmpr_HepG2$EVENT, value = T)
+A5_do_cmpr_HepG2 <- grep(pattern = "^HsaALTD", x = do_cmpr_HepG2$EVENT, value = T) # empty
+
+A5_cmpr_HepG2 <- match_alt35_id(up_ids = A5_up_cmpr_HepG2, do_ids = A5_do_cmpr_HepG2)
+
+message('HepG2 SRRM2 KD:',
+        '\nUP Exon: ', length(EX_up_cmpr_HepG2),
+        '\nDOWN Exon: ', length(EX_do_cmpr_HepG2),
+        '\nUP Intron: ', length(IN_up_cmpr_HepG2),
+        '\nDOWN Intron: ', length(IN_do_cmpr_HepG2),
+        "\nDifferentially spliced 3' splice sites: ", length(A3_cmpr_HepG2),
+        "\nDifferentially spliced 5' splice sites: ", length(A5_cmpr_HepG2) )
+```
+
+There are some changes in AS upon SRRM2 KD in HeLa or in HepG2 cells.
+
+## Frequentist inference method (from tidy)
+
+Start by importing the tidy data set. Here "tidy" means a subset of all identified AS events that have generally a good score (i.e. coverage) and balanced read counts on both splice sites.
+
+```{r, import tidy}
+tidy_events <- read_vst_tbl(path = tidy_psi_path, show_col_types = FALSE) |>
+  mutate(GENE = str_remove(pattern = '=Hsa.*$', string = EVENT) ) |>
+  mutate(EVENT = str_remove(pattern = '^*.*=', string = EVENT) ) |>
+  relocate(GENE, .before = EVENT) |>
+  pivot_longer(cols = starts_with('He'), names_to = 'Sample', values_to = 'PSI') 
+
+message('Tidy events: ', length(unique(tidy_events$EVENT)))
+tidy_events_backup <- tidy_events
+```
+
+Select only the samples from the SRRM2 KD experiment
+
+```{r, select tidy SRRM2 and control}
+tidy_events <- tidy_events[grepl(pattern = '(CNTRL|SRRM2)', x = tidy_events$Sample, perl = T), ]
+```
+
+### PCA
+
+First let's use these events to check the dispersion of the samples with a PCA. First turn the PSI dataframe into a matrix
+
+```{r, Make a matrix }
+tidy_events |> 
+  select(GENE, EVENT, Sample, PSI) |>
+  pivot_wider(id_cols = EVENT, names_from = Sample, values_from = PSI) |>
+  column_to_rownames('EVENT') |>
+  as.matrix() -> tidy_mat
+```
+
+Plot the PCA using the function `showme_PCA2D` form my R package and save it.
+
+```{r, Plot_PCA, fig.width = 10, fig.height = 5}
+showme_PCA2D(log2(tidy_mat), mt = mtdf, mcol = 'Sample', 
+             real_aspect_ratio = F, m_fill = 'CellType', m_label = 'Sample',
+             n_top_var = 1000)
+    
+ggsave(filename = '10_tidy_PCA_HeLa_HepG2.pdf', plot = last_plot(), 
+       device = cairo_pdf, path = plot_dir, units = 'cm', width = 15,
+       height = 10)
+```
+
+The first principal component separates between the 2 cell lines and probably there's a big influence in batch effect between the 2 different experiments. 
+
+```{r, PCA 2v3, fig.width =8, fig.height = 5 }
+showme_PCA2D(log2(tidy_mat), mt = mtdf, mcol = 'Sample', x = 2,
+             real_aspect_ratio = F, m_fill = 'CellType', 
+             m_label = 'Sample', n_top_var = 1000)
+```
+
+The second and third components start separating the data based on the biological KD, but the variance explained in the data is minimal. 
+
+It's probably better to analyse the HeLa cells separately from the HepG2 to focus more on true biological effect.
+
+```{r, PCA HeLa 1v2,  fig.width = 6, fig.height = 3}
+tidy_events_HeLa <- tidy_events_backup[grepl(pattern = 'HeLa', x = tidy_events_backup$Sample, perl = T), ]
+tidy_events_HeLa |> 
+  select(GENE, EVENT, Sample, PSI) |>
+  pivot_wider(id_cols = EVENT, names_from = Sample, values_from = PSI) |>
+  column_to_rownames('EVENT') |>
+  as.matrix() -> tidy_mat_HeLa
+
+showme_PCA2D(mat = log2(tidy_mat_HeLa), mt = mtdf, mcol = 'Sample', real_aspect_ratio = F,
+             m_fill = 'PrettyGroup', m_label = 'PrettySample', n_top_var = 1000)
+
+ggsave(filename = '11_tidy_PCA_HeLa.pdf', plot = last_plot(), 
+       device = cairo_pdf, path = plot_dir, units = 'cm', width = 15,
+       height = 10)
+```
+
+The PC1 is separating the SON KD down-samples while PC2 is separating SRRM2. 
+
+```{r, PCA HepG2 1v2,  fig.width = 6, fig.height = 3}
+tidy_events_HepG2 <- tidy_events_backup[grepl(pattern = 'HepG2', x = tidy_events_backup$Sample, perl = T), ]
+tidy_events_HepG2 |> 
+  select(GENE, EVENT, Sample, PSI) |>
+  pivot_wider(id_cols = EVENT, names_from = Sample, values_from = PSI) |>
+  column_to_rownames('EVENT') |>
+  as.matrix() -> tidy_mat_HepG2
+
+showme_PCA2D(mat = log2(tidy_mat_HepG2), mt = mtdf, mcol = 'Sample', real_aspect_ratio = F,
+             m_fill = 'PrettyGroup', m_label = 'PrettySample', n_top_var = 1000)
+
+ggsave(filename = '12_tidy_PCA_HepG2.pdf', plot = last_plot(), 
+       device = cairo_pdf, path = plot_dir, units = 'cm', width = 15,
+       height = 10)
+```
+
+Here, PC1 is separating a bit of everything, and again PC2 is splitting SRRM2 vs MARS KD. In the HepG2 dataset the samples are a bit more spread out, with replicates `Ca` and `Cb` being a bit of an outlier.
+
+### Heatmaps
+
+Explore the samples with a heatmap of the AS events. First let's check how many events are missing the PSI (e.g. not enough coverage). In the next heatmap the colour white represent `NA` values and black represent a quantification (from 0 to 100). Of course the merged super samples have more coverage. I don't think there's a specific patter and I'd say that the values are missing at random.
+
+```{r, heatmap_NA_values, fig.width = 5, fig.height = 8}
+cairo_pdf(file = file.path(plot_dir, '13_tidy_missing_values_heatmap.pdf'), 
+          width = 5.5, height = 8, bg = NA)
+pheatmap(tidy_mat, na_col = 'white', cluster_rows = F, cluster_cols = T,
+         legend = F, show_rownames = F, color = 'black', 
+         main = paste0( nrow(tidy_mat), ' AS events' ) )
+dev.off()
+```
+One can see that the HepG2 samples are probably more deeply sequenced and have less missing values. 
+
+Since the the super samples have more coverage let's plot only the AS events in those 3 columns. `NA` are again displayed in white.
+
+```{r, heatmap_super_samples, fig.width = 3, fig.height = 8}
+mat <- tidy_mat[, c('HeLa_CNTRL', 'HeLa_SRRM2', 'HepG2_CNTRL', 'HepG2_SRRM2')]
+
+pheatmap(mat = mat, na_col = 'white', cluster_rows = F, cluster_cols = T,
+         main = paste0( nrow(mat), ' AS events'), angle_col = 90,
+         show_rownames = F, color = viridis(n = 100), cutree_cols = 4)
+rm(mat)
+```
+
+The trend is pretty much the same, but HepG2 have more coverage than HeLa cells.
+
+### Testing for significance in HeLa cells
+
+To detect subtle changes with a more statistical framework I try to calculate a *P* value using the individual replicates PSI and plot them against the ∆PSI as a **Volcano plot**. To achieve this first define the sample types.
+
+```{r, set variables with sample types name in HeLa cells}
+mrgd_cntrl <- "HeLa_CNTRL"
+mrgd_SRRM2 <- "HeLa_SRRM2"
+
+CNTRLKD <- c("HeLa_CNTRL_A", "HeLa_CNTRL_B", "HeLa_CNTRL_C")
+SRRM2KD <- c("HeLa_SRRM2_A", "HeLa_SRRM2_B", "HeLa_SRRM2_C")
+```
+
+Filter for samples that have finite ∆PSI (meaning that is not just NA in one of the mrgd samples) and that have maximum one sample per condition as NA (meaning at least 2 samples are not NA). This is step is done only on the SRRM2 KD in HeLa cells.
+
+```{r, selct SRRM2 and control in HeLa}
+te_HeLa_SRRM2 <- tidy_events_HeLa[grepl(pattern = '(CNTRL|SRRM2)', x = tidy_events_HeLa$Sample, perl = T), ]
+```
+
+Filter the data.
+
+```{r, filter tidy events for volcano plot HeLa}
+te_HeLa_SRRM2 |>
+  group_by(EVENT) |>
+  summarise(mPSI_CNTRL = mean(PSI[Sample %in% mrgd_cntrl], na.rm = T),
+            mPSI_SRRM2 = mean(PSI[Sample %in% mrgd_SRRM2], na.rm = T),
+            
+            Samples_NA_CNTRL = sum(is.na(PSI[Sample %in% CNTRLKD])),
+            Samples_NA_SRRM2 = sum(is.na(PSI[Sample %in% SRRM2KD])) ) |>
+  # calculate ∆PSI
+  mutate(dPSI_SRRM2 = mPSI_SRRM2 - mPSI_CNTRL ) |>
+  subset( is.finite(dPSI_SRRM2) ) |>
+  # select samples with max 1 NA PSI value per event
+  # i.e. at least 2 samples with a finite PSI
+  subset( Samples_NA_CNTRL <= 1) |>
+  subset( Samples_NA_SRRM2 <= 1) |>
+  select(EVENT, dPSI_SRRM2) |>
+  unique() |>
+  # Add the ∆PSI of the filtered events to the original data frame
+  left_join(y = te_HeLa_SRRM2, by = join_by(EVENT)) |>
+  relocate(GENE, .before = EVENT) |>
+  relocate(starts_with('dPSI'), .after = PSI) |>
+  # add metadata information
+  left_join(y = mtdf, by = join_by(Sample)) |>
+  # remove merged super sample PSIs
+  subset( !Replicate == 'Merge') |>
+  group_by(EVENT) |>
+  # for the statistical test select only events that are changing a bit to enter the test
+  # if not the data is essentially constant and statistical test fails 
+  # this is calculated by measuring the PSI difference standard deviation that should not be zero
+  mutate(dSD_SRRM2 = sd(PSI[Sample %in% CNTRLKD] - PSI[Sample %in% SRRM2KD],
+                        na.rm = T) ) |>
+  subset(dSD_SRRM2 != 0) |>
+  select( !c(starts_with("dSD_"), PrettySample, KD, CellType)) |> # remove these columns
+  # In addition one could also select the events that have a ∆PSI different from zero.
+  # subset( abs(dPSI_SRRM2) >= 0.01 ) |>
+  ungroup() -> tidy_dPSI_HeLa
+
+message(length(unique(tidy_dPSI_HeLa$EVENT)), '/', 
+        length(unique(tidy_events$EVENT)), ' (', 
+        100*signif(length(unique(tidy_dPSI_HeLa$EVENT))/length(unique(tidy_events$EVENT)), 2), '%) ', 
+        'filtered events that enter the statistical analysis')
+```
+
+::: {.callout-important}
+The following analysis uses Student's *t*-test on PSI values that are bounded between 0 and 100. Some people might find this "statistically wrong" as the PSI distribution does not follow normality. My argument is that PSI is close enough to normality to allow for the use of a *t*-test and the test itself is pretty robust to non-normality anyway. This means that I believe [I *can* use the *t*-test for this data; not that I *should*](https://twitter.com/wolfgangkhuber/status/1297842432281911296).
+:::
+
+Calculate *P* values for SRRM2 KD in HeLa.
+
+```{r, calculate the Pvalue with t-test for SRMM2 KD in HeLa}
+tidy_dPSI_HeLa |> 
+  group_by(EVENT) |>
+  t_test(formula = PSI ~ PrettyGroup, ref.group = 'HeLa_CNTRL', 
+         alternative = "two.sided", paired = F, p.adjust.method = 'none',
+         conf.level = 0.95, detailed = F) |>
+  adjust_pvalue(method = "BH") |> add_significance("p.adj") |>
+  select(EVENT, p, p.adj, p.adj.signif) |>
+  setNames(c('EVENT', 'p_SRRM2_HeLa', 'padj_SRRM2_HeLa', 
+             'padj_signif_SRRM2_HeLa')) -> pvals_SRRM2_HeLa
+```
+
+Combine all data frames into one. If an event as a *P* value that is `NA`, discard it.
+
+```{r, combine stat pval df HeLa}
+left_join(x = tidy_dPSI_HeLa, y = pvals_SRRM2_HeLa, by = join_by(EVENT)) |>
+  subset(!is.na(p_SRRM2_HeLa)) |>
+  subset(!is.na(padj_SRRM2_HeLa)) -> tidy_dPSI_pval_HeLa
+```
+
+Check the *P* value distribution.
+
+```{r, check P value Distribution in HeLa, fig.width = 6, fig.height = 4}
+tidy_dPSI_pval_HeLa |>
+  select(EVENT, p_SRRM2_HeLa) |>
+  pivot_longer(cols = starts_with("p")) |>
+  ggplot() +
+  aes(x = value, fill = name) +
+  geom_histogram(bins = 25, colour = 'black', show.legend = F) + 
+  labs(x = "P values") + theme_bw() 
+```
+
+Well that's not that promising but at least it is somewhat uniform.
+
+To control for this I set a non-corrected *P* value threshold to `r pval_thrshld`, which is more conservative, plus the size effect threshold is \|∆PSI\| \>= `r dPSI_thrshld`.
+
+```{r, apply statistical thresholds HeLa}
+dPSI_squish <- 40
+
+tidy_dPSI_pval_HeLa <- tidy_dPSI_pval_HeLa |>
+  # label the events that are below significant thresholds
+  mutate(DSE_SRRM2_HeLa = p_SRRM2_HeLa < pval_thrshld & abs(dPSI_SRRM2) >= dPSI_thrshld ) 
+```
+
+#### Volcano plots
+
+Volcano plot of SRRM2 KD in HeLa. Points with \|∆PSI\| \> `r dPSI_squish` are squished on the sides of the plot.
+
+```{r, volcano_plot_HeLa, fig.width = 5, fig.height = 6, warning = FALSE, message = FALSE}
+# select fewer columns for plotting
+subset(tidy_dPSI_pval_HeLa) |>
+  select(GENE, EVENT, dPSI_SRRM2, p_SRRM2_HeLa, padj_SRRM2_HeLa, DSE_SRRM2_HeLa) |>
+  unique() -> plot_HELA
+
+ggplot(plot_HELA) +
+  aes(x = dPSI_SRRM2, y = -log10(p_SRRM2_HeLa), fill = DSE_SRRM2_HeLa) +
+  geom_hline(yintercept = -log10(pval_thrshld), linewidth = 0.1, colour = 'black') +
+  geom_vline(xintercept = -dPSI_thrshld, linewidth = 0.1, colour = 'black') +
+  geom_vline(xintercept = dPSI_thrshld, linewidth = 0.1, colour = 'black') +
+  geom_text_repel(data = subset(plot_HELA, DSE_SRRM2_HeLa),
+                  aes(label = GENE, x = dPSI_SRRM2, y = -log10(p_SRRM2_HeLa)),
+                      seed = 16, show.legend = F, segment.curvature = -1e-20,
+                      family = "Arial", size = 2, nudge_x = -0.25,
+                      segment.color = 'black', verbose = F, lwd = 0.1,
+                      box.padding = grid::unit(1, "mm"),
+                      point.padding = grid::unit(0.55, "mm"),
+                      max.overlaps = 20 ) +
+  geom_point(shape = 21, show.legend = F, alpha = 1, stroke = 0.2) +
+  scale_fill_manual(values = c('gray84', 'firebrick3') ) +
+  scale_x_continuous(n.breaks = 10, oob = scales::squish, limits = c(-dPSI_squish, dPSI_squish),
+                     expand = expansion(mult = 0, add = 0.5)) +
+  scale_y_continuous(expand = expansion(mult = c(0.01, 0.05), add = 0) ) +
+  coord_cartesian(ylim = c(0, 6.05)) + # set this to have the 2 volcano plots with the same Y-axis range
+  labs( x = "\u0394PSI (SRRM2 KD - Cntrl)", y = expression(-log[10] ~ "P value") ) +
+  theme_classic(base_family = 'Arial') +
+  theme(axis.text = element_text(colour = 'black'),
+        axis.line = element_line(colour = 'black', linewidth = 0.2),
+        panel.grid.major = element_line(linewidth = 0.1),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        plot.background = element_blank())
+
+ggsave(filename = '14_tidy_SRRM2_Volcano_HeLa.pdf', plot = last_plot(), 
+       device = cairo_pdf, path = plot_dir, units = 'cm', width = 10,
+       height = 12)
+```
+
+Check the PSI of some of them.
+
+```{r, select top HeLa}
+subset(tidy_dPSI_pval_HeLa) |>
+  select(GENE, EVENT, dPSI_SRRM2, p_SRRM2_HeLa, padj_SRRM2_HeLa, padj_signif_SRRM2_HeLa, DSE_SRRM2_HeLa) |>
+  subset(DSE_SRRM2_HeLa) |>
+  unique() |>
+  arrange(padj_SRRM2_HeLa) |>
+  head(10) |>
+  pull(EVENT) -> top_tidy_events_HeLa
+```
+
+Grep the PSIs as not all of them are in the compared table. This my take a while...
+
+```{r, grep PSIs from inclusion table of tidy HeLa events, eval = F, echo = T}
+grep_psi(inclusion_tbl = psi_path, vst_id = top_tidy_events_HeLa) |>
+  tidy_vst_psi() -> tmp
+```
+
+Plot some PSIs.
+
+```{r, plot this few events PSIs in HeLa, eval = F, echo = T, fig.width = 8, fig.height = 6}
+left_join( x = tmp, y = mtdf, by = join_by(Sample)) |>
+  subset(CellType == 'HeLa' ) |>
+  plot_PSI_boxplot(num_col = 5, order_by_dPSI = F, legend_xy = c(1, 3))
+```
+As one can see in the plot above, all these events have very good accordance between replicates (i.e. low standard deviation). So applying the Student's *t*-test on PSI values with a low *P* values filter (`r pval_thrshld`) is a good approach for detecting events that are clearly differentially spliced.
+
+Select the differentially spliced events in SRRM2 KD HeLa.
+
+```{r, get IDs of up and down exons tidy method HeLa}
+subset(tidy_dPSI_pval_HeLa) |>
+  select(GENE, EVENT, dPSI_SRRM2, p_SRRM2_HeLa, padj_SRRM2_HeLa, DSE_SRRM2_HeLa) |>
+  subset(DSE_SRRM2_HeLa) |>
+  unique() -> tidy_signif_HeLa
+
+up_tidy_HeLa <- subset(tidy_signif_HeLa, dPSI_SRRM2 >= 0)
+do_tidy_HeLa <- subset(tidy_signif_HeLa, dPSI_SRRM2 < 0)
+
+EX_up_tidy_HeLa <- grep(pattern = "^HsaEX", x = up_tidy_HeLa$EVENT, value = T)
+EX_do_tidy_HeLa <- grep(pattern = "^HsaEX", x = do_tidy_HeLa$EVENT, value = T)
+
+IN_up_tidy_HeLa <- grep(pattern = "^HsaINT", x = up_tidy_HeLa$EVENT, value = T)
+IN_do_tidy_HeLa <- grep(pattern = "^HsaINT", x = do_tidy_HeLa$EVENT, value = T)
+
+A3_up_tidy_HeLa <- grep(pattern = "^HsaALTA", x = up_tidy_HeLa$EVENT, value = T)
+A3_do_tidy_HeLa <- grep(pattern = "^HsaALTA", x = do_tidy_HeLa$EVENT, value = T)
+
+A3_tidy_HeLa <- match_alt35_id(up_ids = A3_up_tidy_HeLa, do_ids = A3_do_tidy_HeLa)
+
+A5_up_tidy_HeLa <- grep(pattern = "^HsaALTD", x = up_tidy_HeLa$EVENT, value = T)
+A5_do_tidy_HeLa <- grep(pattern = "^HsaALTD", x = do_tidy_HeLa$EVENT, value = T)
+
+A5_tidy_HeLa <- match_alt35_id(up_ids = A5_up_tidy_HeLa, do_ids = A5_do_tidy_HeLa)
+```
+
+Print the number of differentially spliced events found with the `tidy` approach.
+
+```{r, DSE tidy method report HeLa}
+message('HeLa SRRM2 KD tidy method:',
+        '\nUP Exon: ', length(EX_up_tidy_HeLa),
+        '\nDOWN Exon: ', length(EX_do_tidy_HeLa),
+        '\nUP Intron: ', length(IN_up_tidy_HeLa),
+        '\nDOWN Intron: ', length(IN_do_tidy_HeLa),
+        "\nDifferentially spliced 3' splice sites: ", length(A3_tidy_HeLa),
+        "\nDifferentially spliced 5' splice sites: ", length(A5_tidy_HeLa) )
+```
+
+The tidy method identifies less events, as it is stringent.
+
+### Testing for significance in HepG2 cells
+
+Now repeat the same thing but for HepG2 cells
+
+```{r, set variables with sample types name in HepG2 cells}
+mrgd_cntrl <- "HepG2_CNTRL"
+mrgd_SRRM2 <- "HepG2_SRRM2"
+
+CNTRLKD <- c("HepG2_CNTRL_A", "HepG2_CNTRL_B", "HepG2_CNTRL_C")
+SRRM2KD <- c("HepG2_SRRM2_Aa", "HepG2_SRRM2_Ab",
+             "HepG2_SRRM2_Ba", "HepG2_SRRM2_Bb",
+             "HepG2_SRRM2_Ca", "HepG2_SRRM2_Cb")
+```
+
+Filter for samples that have finite ∆PSI (meaning that is not just NA in one of the mrgd samples) and that have maximum one sample per condition as NA (meaning at least 2 samples are not NA). This is step is done only on the SRRM2 KD in HeLa cells.
+
+```{r, selct SRRM2 and control in HepG2}
+te_HepG2_SRRM2 <- tidy_events_HepG2[grepl(pattern = '(CNTRL|SRRM2)', x = tidy_events_HepG2$Sample, perl = T), ]
+```
+
+Filter the data in the same way.
+
+```{r, filter tidy events for volcano plot HepG2}
+te_HepG2_SRRM2 |>
+  group_by(EVENT) |>
+  summarise(mPSI_CNTRL = mean(PSI[Sample %in% mrgd_cntrl], na.rm = T),
+            mPSI_SRRM2 = mean(PSI[Sample %in% mrgd_SRRM2], na.rm = T),
+            
+            Samples_NA_CNTRL = sum(is.na(PSI[Sample %in% CNTRLKD])),
+            Samples_NA_SRRM2 = sum(is.na(PSI[Sample %in% SRRM2KD])) ) |>
+  # calculate ∆PSI
+  mutate(dPSI_SRRM2 = mPSI_SRRM2 - mPSI_CNTRL ) |>
+  subset( is.finite(dPSI_SRRM2) ) |>
+  # select samples with max 1 NA PSI value per event
+  subset( Samples_NA_CNTRL <= 1) |>
+  subset( Samples_NA_SRRM2 <= 1) |>
+  select(EVENT, dPSI_SRRM2) |>
+  unique() |>
+  # Add the ∆PSI of the filtered events to the original data frame
+  left_join(y = te_HepG2_SRRM2, by = join_by(EVENT)) |>
+  relocate(GENE, .before = EVENT) |>
+  relocate(starts_with('dPSI'), .after = PSI) |>
+  # add metadata information
+  left_join(y = mtdf, by = join_by(Sample)) |>
+  # remove merged super sample PSIs
+  subset( !Replicate == 'Merge') |>
+  group_by(EVENT) |>
+  # for the statistical test select only events that are changing a bit to enter the test
+  # if not the data is essentially constant and statistical test fails 
+  # this is calculated by measuring the PSI difference standard deviation that should not be zero
+  mutate(dSD_SRRM2 = sd(PSI[Sample %in% CNTRLKD] - PSI[Sample %in% SRRM2KD],
+                        na.rm = T) ) |>
+  subset(dSD_SRRM2 != 0) |>
+  select( !c(starts_with("dSD_"), PrettySample, KD, CellType)) |> # remove these columns
+  # In addition one could also select the events that have a ∆PSI different from zero.
+  # subset( abs(dPSI_SRRM2) >= 0.01 ) |>
+  ungroup() -> tidy_dPSI_HepG2
+
+message(length(unique(tidy_dPSI_HepG2$EVENT)), '/', 
+        length(unique(tidy_events$EVENT)), ' (', 
+        100*signif(length(unique(tidy_dPSI_HepG2$EVENT))/length(unique(tidy_events$EVENT)), 2), '%) ', 
+        'filtered events that enter the statistical analysis')
+```
+
+Calculate *P* values for SRRM2 KD in HepG2.
+
+```{r, calculate the Pvalue with t-test for SRMM2 KD in HepG2}
+tidy_dPSI_HepG2 |> 
+  group_by(EVENT) |>
+  t_test(formula = PSI ~ PrettyGroup, ref.group = 'HepG2_CNTRL', alternative = "two.sided", 
+         paired = F, p.adjust.method = 'none', conf.level = 0.95, detailed = F) |>
+  adjust_pvalue(method = "BH") |> add_significance("p.adj") |>
+  select(EVENT, p, p.adj, p.adj.signif) |>
+  setNames(c('EVENT', 'p_SRRM2_HepG2', 'padj_SRRM2_HepG2', 'padj_signif_SRRM2_HepG2')) -> pvals_SRRM2_HepG2
+```
+
+```{r, calculate the Pvalue with wilcoxn-test for SRMM2 KD in HepG2, eval = FALSE, echo = FALSE}
+# Calculate P values for SRRM2 KD in HepG2 with the wilcoxon test.
+tidy_dPSI_HepG2 |> 
+  group_by(EVENT) |>
+  wilcox_test(formula = PSI ~ PrettyGroup, ref.group = 'HepG2_CNTRL',
+              alternative = "two.sided", paired = F, p.adjust.method = 'none',
+              conf.level = 0.95, detailed = F) |>
+  adjust_pvalue(method = "BH") |> add_significance("p.adj") |>
+  select(EVENT, p, p.adj, p.adj.signif) |>
+  setNames(c('EVENT', 'p_SRRM2_HepG2', 'padj_SRRM2_HepG2',
+             'padj_signif_SRRM2_HepG2')) -> pvals_SRRM2_HepG2_wc
+```
+
+Combine all data frames into one. If an event as a *P* value that is `NA`, discard it.
+
+```{r, combine stat pval df in HepG2}
+left_join(x = tidy_dPSI_HepG2, y = pvals_SRRM2_HepG2, by = join_by(EVENT)) |>
+  subset(!is.na(p_SRRM2_HepG2)) |>
+  subset(!is.na(padj_SRRM2_HepG2)) -> tidy_dPSI_pval_HepG2
+```
+
+Check the *P* value distribution in HepG2 cells.
+
+```{r, check_pvalue_distribution HepG2, fig.width = 6, fig.height = 4}
+tidy_dPSI_pval_HepG2 |>
+  select(EVENT, p_SRRM2_HepG2) |>
+  pivot_longer(cols = starts_with("p")) |>
+  ggplot() +
+  aes(x = value, fill = name) +
+  geom_histogram(bins = 25, colour = 'black', show.legend = F) + 
+  labs(x = "P values") + theme_bw() 
+```
+
+```{r, apply statistical thresholds HepG2}
+dPSI_squish <- 40
+
+tidy_dPSI_pval_HepG2 <- tidy_dPSI_pval_HepG2 |>
+  # label the events that are below significant thresholds
+  mutate(DSE_SRRM2_HepG2 = p_SRRM2_HepG2 < pval_thrshld & abs(dPSI_SRRM2) >= dPSI_thrshld ) 
+```
+
+Volcano plot of SRRM2 KD. Points with \|∆PSI\| \> `r dPSI_squish` are squished on the sides of the plot.
+
+```{r, volcano_plot_HepG2, fig.width = 5, fig.height = 6, warning = FALSE, message = FALSE}
+# select fewer columns for plotting
+subset(tidy_dPSI_pval_HepG2) |>
+  select(GENE, EVENT, dPSI_SRRM2, p_SRRM2_HepG2, padj_SRRM2_HepG2, DSE_SRRM2_HepG2) |>
+  unique() -> plot_HepG2
+
+ggplot(plot_HepG2) +
+  aes(x = dPSI_SRRM2, y = -log10(p_SRRM2_HepG2), fill = DSE_SRRM2_HepG2) +
+  geom_hline(yintercept = -log10(pval_thrshld), linewidth = 0.1, colour = 'black') +
+  geom_vline(xintercept = -dPSI_thrshld, linewidth = 0.1, colour = 'black') +
+  geom_vline(xintercept = dPSI_thrshld, linewidth = 0.1, colour = 'black') +
+  geom_text_repel(data = subset(plot_HepG2, DSE_SRRM2_HepG2),
+                  aes(label = GENE, x = dPSI_SRRM2, y = -log10(p_SRRM2_HepG2)),
+                      seed = 16, show.legend = F, segment.curvature = -1e-20,
+                      family = "Arial", size = 2, nudge_x = -0.25,
+                      segment.color = 'black', verbose = F, lwd = 0.1,
+                      box.padding = grid::unit(1, "mm"),
+                      point.padding = grid::unit(0.55, "mm"),
+                      max.overlaps = 20 ) +
+  geom_point(shape = 21, show.legend = F, alpha = 1, stroke = 0.2) +
+  scale_fill_manual(values = c('gray84', 'firebrick3') ) +
+  scale_x_continuous(n.breaks = 10, oob = scales::squish, limits = c(-dPSI_squish, dPSI_squish),
+                     expand = expansion(mult = 0, add = 0.5)) +
+  scale_y_continuous(expand = expansion(mult = c(0.01, 0.05), add = 0) ) +
+  coord_cartesian(ylim = c(0, 6.05)) + # set this to have the 2 volcano plots with the same Y-axis range
+  labs( x = "\u0394PSI (SRRM2 KD - Cntrl)", y = expression(-log[10] ~ "P value") ) +
+  theme_classic(base_family = 'Arial') +
+  theme(axis.text = element_text(colour = 'black'),
+        axis.line = element_line(colour = 'black', linewidth = 0.2),
+        panel.grid.major = element_line(linewidth = 0.1),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        plot.background = element_blank())
+
+ggsave(filename = '15_tidy_SRRM2_Volcano_HepG2.pdf', plot = last_plot(), 
+       device = cairo_pdf, path = plot_dir, units = 'cm', width = 10,
+       height = 12)
+```
+
+Select the differentially spliced events in SRRM2 KD HepG2 cells.
+
+```{r, get IDs of up and down exons tidy method HepG2}
+subset(tidy_dPSI_pval_HepG2) |>
+  select(GENE, EVENT, DSE_SRRM2_HepG2, dPSI_SRRM2, p_SRRM2_HepG2, padj_SRRM2_HepG2, DSE_SRRM2_HepG2) |>
+  subset(DSE_SRRM2_HepG2) |>
+  unique() -> tidy_signif_HepG2
+
+up_tidy_HepG2 <- subset(tidy_signif_HepG2, dPSI_SRRM2 >= 0)
+do_tidy_HepG2 <- subset(tidy_signif_HepG2, dPSI_SRRM2 < 0)
+
+EX_up_tidy_HepG2 <- grep(pattern = "^HsaEX", x = up_tidy_HepG2$EVENT, value = T)
+EX_do_tidy_HepG2 <- grep(pattern = "^HsaEX", x = do_tidy_HepG2$EVENT, value = T)
+
+IN_up_tidy_HepG2 <- grep(pattern = "^HsaINT", x = up_tidy_HepG2$EVENT, value = T)
+IN_do_tidy_HepG2 <- grep(pattern = "^HsaINT", x = do_tidy_HepG2$EVENT, value = T)
+
+A3_up_tidy_HepG2 <- grep(pattern = "^HsaALTA", x = up_tidy_HepG2$EVENT, value = T)
+A3_do_tidy_HepG2 <- grep(pattern = "^HsaALTA", x = do_tidy_HepG2$EVENT, value = T)
+
+A3_tidy_HepG2 <- match_alt35_id(up_ids = A3_up_tidy_HepG2, do_ids = A3_do_tidy_HepG2)
+
+A5_up_tidy_HepG2 <- grep(pattern = "^HsaALTD", x = up_tidy_HepG2$EVENT, value = T)
+A5_do_tidy_HepG2 <- grep(pattern = "^HsaALTD", x = do_tidy_HepG2$EVENT, value = T)
+
+A5_tidy_HepG2 <- match_alt35_id(up_ids = A5_up_tidy_HepG2, do_ids = A5_do_tidy_HepG2)
+```
+
+Print the number of DSE found with the tidy method.
+
+```{r, DSE tidy method report HepG2}
+message('HepG2 SRRM2 KD tidy method:',
+        '\nUP Exon: ', length(EX_up_tidy_HepG2),
+        '\nDOWN Exon: ', length(EX_do_tidy_HepG2),
+        '\nUP Intron: ', length(IN_up_tidy_HepG2),
+        '\nDOWN Intron: ', length(IN_do_tidy_HepG2),
+        "\nDifferentially spliced 3' splice sites: ", length(A3_tidy_HepG2),
+        "\nDifferentially spliced 5' splice sites: ", length(A5_tidy_HepG2) )
+```
+
+## Bayesian method (from diff)
+
+Import the vast-tools diff tables. Note: diff outputs PSIs from 0 to 1, so I multiply them by 100.
+
+This tables were create with this command line short cut:
+
+```{sh, example filtering command line diff, eval = FALSE}
+tail -n +2 Diff_output_all_events_noB3_pIR.tab | \
+      awk '{OFS="\t"} { if($6 >= 0.15) print $1, $2, $5, $6}' | \
+      sort -k3,4nr  | sed -e $'1iGENE\tEVENT\tdPSI\tMVdPSIat95' > Fltrd
+```
+
+Which filters for events with a minimum value of \|∆PSI\| \>= 15 with a 95% confidence (column number 6) and sorts them by observed ∆PSI (column number 5).
+
+```{r, import fltrd diff tables}
+diff_HeLa <- read_vst_tbl(path = diff_HeLa_SRRM2_path, show_col_types = FALSE) |>
+  mutate(dPSI = dPSI * 100) |>
+  mutate(MVdPSIat95 = MVdPSIat95 * 100) |>
+  mutate(COMPLEX = case_when( grepl(x = EVENT, pattern = '^HsaEX') ~ 'S',
+                                grepl(x = EVENT, pattern = '^HsaINT') ~ 'IR',
+                                grepl(x = EVENT, pattern = '^HsaALTD') ~ 'Alt5',
+                                grepl(x = EVENT, pattern = '^HsaALTA') ~ 'Alt3') ) |>
+  mutate(comparison = 'HeLa')
+
+diff_HepG2 <- read_vst_tbl(path = diff_HepG2_SRRM2_path, show_col_types = FALSE) |>
+  mutate(dPSI = dPSI * 100) |>
+  mutate(MVdPSIat95 = MVdPSIat95 * 100) |>
+  mutate(COMPLEX = case_when( grepl(x = EVENT, pattern = '^HsaEX') ~ 'S',
+                                grepl(x = EVENT, pattern = '^HsaINT') ~ 'IR',
+                                grepl(x = EVENT, pattern = '^HsaALTD') ~ 'Alt5',
+                                grepl(x = EVENT, pattern = '^HsaALTA') ~ 'Alt3') ) |>
+  mutate(comparison = 'HepG2')
+```
+
+How many AS events?
+
+```{r, show some numbers of diff}
+diff_events_HeLa <- unique(diff_HeLa$EVENT)
+message(length(diff_events_HeLa), ' diff events in HeLa upon SRRM2 KD')
+
+diff_events_HepG2 <- unique(diff_HepG2$EVENT)
+message(length(diff_events_HepG2), ' diff events in HepG2 upon SRRM2 KD')
+
+diff_events_common <- intersect(diff_events_HeLa, diff_events_HepG2)
+message(length(diff_events_common), ' diff events common between both KD')
+
+# make a list with the DSE of each KD
+diff_events_HeLa_only <- diff_events_HeLa[( !diff_events_HeLa %in% diff_events_common)]
+diff_events_HepG2_only <- diff_events_HepG2[( !diff_events_HepG2 %in% diff_events_common)]
+```
+
+Interestingly not many events are common between the 2 KD.
+
+Plot the actual ∆PSI of the events that were filtered to have a minimum value of \|∆PSI\| \>=15 with a 95% confidence.
+
+```{r, diff_SRRM2_hist_HeLa, fig.width = 6, fig.height = 3}
+plot_dPSI_hist_grpd(diff_HeLa) +
+  geom_vline(xintercept = -15) + geom_vline(xintercept = 15) 
+  
+ggsave(filename = '16_diff_dPSI_SRRM2-KD_HeLa_Histogram.pdf', plot = last_plot(), 
+       device = cairo_pdf, path = plot_dir, units = 'cm', width = 12,
        height = 6)
 ```
 
-**Explore some specific events** 
+There seem to be a good balance between up and down regulated events.
 
+```{r, diff_SRRM2_hist_HepG2, fig.width = 6, fig.height = 3}
+plot_dPSI_hist_grpd(diff_HepG2) +
+  geom_vline(xintercept = -15) +   geom_vline(xintercept = 15) 
+
+ggsave(filename = '17_diff_dPSI_SRRM2-KD_HepG2_Histogram.pdf', plot = last_plot(), 
+       device = cairo_pdf, path = plot_dir, units = 'cm', width = 12,
+       height = 6)
+```
+
+These seems to be more down regulated AS events in HepG2 SRRM2 KD.
+
+The diff table does not contain all the information about the AS event as the main full inclusion table so I get such info from the full inclusion table.
+
+```{r, tell about getting IDs details}
+fetch_diff_IDs <- unique(c(diff_events_HeLa, diff_events_HepG2))
+message(length(fetch_diff_IDs), ' events to get info... this may take some time')
+```
+
+This next step might take some time to process.
+
+```{r, fetch diff events info, eval = FALSE}
+grep_psi(inclusion_tbl = psi_path, vst_id = fetch_diff_IDs) |>
+  tidy_vst_psi() -> diff_psi_df
+```
+
+To avoid having to repeat this step in the future I save this dataframe to file and not execute the code chunk above any more.
+
+```{r, save to tab the diff exons, eval = FALSE}
+write_delim(x = diff_psi_df, delim = '\t',
+            file = file.path(diff_dir, 'Fltrd_Annotated_Diff_Events_HeLa_Both_OE.tab') ) 
+```
+
+Import the table that was written the first time.
+
+```{r, import diff annotated events}
+diff_psi_df <- read_vst_tbl(show_col_types = FALSE,
+  path = file.path(diff_dir, 'Fltrd_Annotated_Diff_Events_KD.tab') ) |>
+  left_join(y = mtdf, by = join_by(Sample))
+```
+
+Separate between the exons and the introns that are up or down spliced in HeLa SRRM2 KD
+
+```{r, get IDs of up and down exons diff method HeLa}
+up_diff_HeLa <- subset(diff_HeLa, dPSI >= 0)
+do_diff_HeLa <- subset(diff_HeLa, dPSI < 0)
+
+EX_up_diff_HeLa <- grep(pattern = "^HsaEX", x = up_diff_HeLa$EVENT, value = T)
+EX_do_diff_HeLa <- grep(pattern = "^HsaEX", x = do_diff_HeLa$EVENT, value = T)
+
+IN_up_diff_HeLa <- grep(pattern = "^HsaINT", x = up_diff_HeLa$EVENT, value = T)
+IN_do_diff_HeLa <- grep(pattern = "^HsaINT", x = do_diff_HeLa$EVENT, value = T)
+
+A3_up_diff_HeLa <- grep(pattern = "^HsaALTA", x = up_diff_HeLa$EVENT, value = T)
+A3_do_diff_HeLa <- grep(pattern = "^HsaALTA", x = do_diff_HeLa$EVENT, value = T)
+
+A3_diff_HeLa <- match_alt35_id(up_ids = A3_up_tidy_HeLa, do_ids = A3_do_tidy_HeLa)
+
+A5_up_diff_HeLa <- grep(pattern = "^HsaALTD", x = up_diff_HeLa$EVENT, value = T)
+A5_do_diff_HeLa <- grep(pattern = "^HsaALTD", x = do_diff_HeLa$EVENT, value = T)
+
+A5_diff_HeLa <- match_alt35_id(up_ids = A5_up_diff_HeLa, do_ids = A5_do_diff_HeLa)
+```
+
+Print the number.
+
+```{r, DSE diff method report HeLa}
+message('HeLa SRRM2 KD diff method:',
+        '\nUP Exon: ', length(EX_up_diff_HeLa),
+        '\nDOWN Exon: ', length(EX_do_diff_HeLa),
+        '\nUP Intron: ', length(IN_up_diff_HeLa),
+        '\nDOWN Intron: ', length(IN_do_diff_HeLa),
+        "\nDifferentially spliced 3' splice sites: ", length(A3_diff_HeLa),
+        "\nDifferentially spliced 5' splice sites: ", length(A5_diff_HeLa) )
+```
+
+Separate between the exons and the introns that are up or down spliced in HepG2 SRRM2 KD
+
+```{r, get IDs of up and down exons diff method HepG2}
+up_diff_HepG2 <- subset(diff_HepG2, dPSI >= 0)
+do_diff_HepG2 <- subset(diff_HepG2, dPSI < 0)
+
+EX_up_diff_HepG2 <- grep(pattern = "^HsaEX", x = up_diff_HepG2$EVENT, value = T)
+EX_do_diff_HepG2 <- grep(pattern = "^HsaEX", x = do_diff_HepG2$EVENT, value = T)
+
+IN_up_diff_HepG2 <- grep(pattern = "^HsaINT", x = up_diff_HepG2$EVENT, value = T)
+IN_do_diff_HepG2 <- grep(pattern = "^HsaINT", x = do_diff_HepG2$EVENT, value = T)
+
+A3_up_diff_HepG2 <- grep(pattern = "^HsaALTA", x = do_diff_HepG2$EVENT, value = T)
+A3_do_diff_HepG2 <- grep(pattern = "^HsaALTA", x = do_diff_HepG2$EVENT, value = T)
+
+A3_diff_HepG2 <- match_alt35_id(up_ids = A3_up_diff_HepG2, do_ids = A3_do_diff_HepG2)
+
+A5_up_diff_HepG2 <- grep(pattern = "^HsaALTD", x = do_diff_HepG2$EVENT, value = T)
+A5_do_diff_HepG2 <- grep(pattern = "^HsaALTD", x = do_diff_HepG2$EVENT, value = T)
+
+A5_diff_HepG2 <- match_alt35_id(up_ids = A5_up_diff_HepG2, do_ids = A5_do_diff_HepG2)
+```
+
+Print the number of DSE found with the diff method.
+
+```{r, DSE diff method report HepG2}
+message('HepG2 SRRM2 KD diff method:',
+        '\nUP Exon: ', length(EX_up_diff_HepG2),
+        '\nDOWN Exon: ', length(EX_do_diff_HepG2),
+        '\nUP Intron: ', length(IN_up_diff_HepG2),
+        '\nDOWN Intron: ', length(IN_do_diff_HepG2),
+        "\nDifferentially spliced 3' splice sites: ", length(A3_diff_HepG2),
+        "\nDifferentially spliced 5' splice sites: ", length(A5_diff_HepG2))
+```
+
+# SRRM2 expression
+
+Checking the SRRM2 expression across the dataset.
+
+```{r, check SRRM2 expression, fig.width = 8, fig.height = 5}
+grep_gene_expression(vst_expression_tbl = expr_path, 
+                     ensembl_gene_id = 'ENSG00000167978') |>
+  tidy_vst_expr(expression_unit = 'TPM' ) |>
+  left_join(y = mtdf, by = join_by(Sample) ) |>
+  ggplot() +
+  aes(x = PrettyGroup, y = log2(Gene_Expr)) +
+  geom_boxplot(fill = NA, outlier.shape = NA, lwd = 0.2) +
+  geom_point( aes(shape = Replicate, fill = CellType), show.legend = FALSE,
+              size = 1.5, stroke = 0.2, position = position_dodge(width = 0.5)) +
+  scale_shape_manual(values = c('Merge' = 22, 'A' = 21, 'Aa' = 21, 'Ab' = 21,
+                                'B' = 21, 'Ba' = 21, 'Bb' = 21, 
+                                'C' = 21, 'Ca' = 21, 'Cb' = 21 ) ) +
+  scale_x_discrete(labels = \(x) gsub(pattern = '_', replacement = '\n', x) ) +
+  scale_fill_manual(values = sample_palette) +
+  coord_cartesian(ylim = c(5, 9)) +
+  labs(y = 'Norm. TPMs (log2)') +
+  guides(fill = guide_legend(override.aes = list(shape = 21)), shape = 'none') +
+  theme_classic() +
+    theme(axis.text = element_text(colour = "black"),
+          axis.line = element_line(linewidth = 0.2),
+          axis.title.x = element_blank(),
+          strip.background = element_blank(),
+          strip.text = element_text(vjust = 1, lineheight = 0, 
+                                    margin = margin(t = 0, unit = 'mm')),
+          panel.grid.major = element_line(colour = 'gray84', linewidth = 0.15) ) 
+
+ggsave(filename = '0_SRRM2_Expression_HeLa_HepG2_Boxplot.pdf', plot = last_plot(), 
+       device = cairo_pdf, path = plot_dir, units = 'cm', width = 16,
+       height = 8)
+```
+
+The square point is the merged replicates into a super sample. The KD seems to work.
+
+# Overlap of differentially spliced events
+
+::: callout-note
+Plots should be improved.
+:::
+
+## Exons
+
+```{r, make list exons in HeLa and HepG2}
+EX_up_HeLa <- unique(c(EX_up_cmpr_HeLa, EX_up_tidy_HeLa, EX_up_diff_HeLa))
+EX_do_HeLa <- unique(c(EX_do_cmpr_HeLa, EX_do_tidy_HeLa, EX_do_diff_HeLa))
+
+EX_up_HepG2 <- unique(c(EX_up_cmpr_HepG2, EX_up_tidy_HepG2, EX_up_diff_HepG2))
+EX_do_HepG2 <- unique(c(EX_do_cmpr_HepG2, EX_do_tidy_HepG2, EX_do_diff_HepG2))
+
+dsexons_list <- list(EX_up_HeLa, EX_do_HeLa, EX_up_HepG2, EX_do_HepG2)
+ 
+names(dsexons_list) <- c('EX UP HeLa', 'EX DOWN HeLa', 'EX UP HepG2', 'EX DOWN HepG2')
+```
+
+```{r, make upset plot all ex int events }
+intersection_exons_ids <- upset(fromList(dsexons_list), text.scale = 1.5, 
+                                nintersects = 6, 
+                                mb.ratio = c(0.7, 0.3),
+                                point.size = 5, order.by = 'freq', keep.order = T,
+                                sets = rev(names(dsexons_list)),
+                                main.bar.color = "gray16") 
+```
+
+Show the number and overlap of events found by each method with an upset plot:
+```{r, show_upset_plot_all_ex, fig.width = 5, fig.height = 4.5}
+intersection_exons_ids
+```
+
+Save to pdf. 
+```{r, save upset plot exons interactions HeLa HepG2, message = FALSE, warning = FALSE}
+cairo_pdf(file = file.path(plot_dir, '19_overlap_diff_exons_Upset_HeLa_HepG2.pdf'), 
+          width = 5, height = 4.5, bg = NA)
+intersection_exons_ids
+dev.off()
+```
+
+## Introns
+
+```{r, make list introns HeLa and HepG2}
+IN_up_HeLa <- unique(c(IN_up_cmpr_HeLa, IN_up_tidy_HeLa, IN_up_diff_HeLa))
+IN_do_HeLa <- unique(c(IN_do_cmpr_HeLa, IN_do_tidy_HeLa, IN_do_diff_HeLa))
+
+IN_up_HepG2 <- unique(c(IN_up_cmpr_HepG2, IN_up_tidy_HepG2, IN_up_diff_HepG2))
+IN_do_HepG2 <- unique(c(IN_do_cmpr_HepG2, IN_do_tidy_HepG2, IN_do_diff_HepG2))
+ 
+dsintrons_list <- list(IN_up_HeLa, IN_do_HeLa, IN_up_HepG2, IN_do_HepG2)
+names(dsintrons_list) <- c('INT UP HeLa', 'INT DOWN HeLa', 'INT UP HepG2', 'INT DOWN HepG2')
+```
+
+Make upset plot introns
+```{r, make upset plot all intron int events}
+intersection_introns_ids <- upset(fromList(dsintrons_list), text.scale = 1.5, nintersects = NA, 
+                                  mb.ratio = c(0.7, 0.3), 
+                                  point.size = 5, order.by = 'freq', keep.order = T,
+                                  sets = rev(names(dsintrons_list)),
+                                  main.bar.color = "gray16") 
+```
+
+Show the number and overlap of events found by each method with an upset plot:
+
+```{r, show_upset_plot_all introns, fig.width = 5, fig.height = 4.5}
+intersection_introns_ids
+```
+
+```{r, save upset plot introns interactions, message = FALSE, warning = FALSE}
+cairo_pdf(file = file.path(plot_dir, '20_overlap_diff_introns_Upset.pdf'), 
+          width = 6, height = 4.5, bg = NA)
+intersection_introns_ids
+dev.off()
+```
+
+::: callout-warning
+There is very little overlap between the events that are differentially spliced in HeLa or HepG2 cells upon SRRM2 knockdown!
+:::
+
+### Alt 3' or 5' splice site
+
+```{r, make list altDA HeLa and HepG2 }
+A3_HeLa <- unique(c(A3_cmpr_HeLa, A3_tidy_HeLa, A3_diff_HeLa))
+A5_HeLa <- unique(c(A5_cmpr_HeLa, A5_tidy_HeLa, A5_diff_HeLa))
+
+A3_HepG2 <- unique(c(A3_cmpr_HepG2, A3_tidy_HepG2, A3_diff_HepG2))
+A5_HepG2 <- unique(c(A5_cmpr_HepG2, A5_tidy_HepG2, A5_diff_HepG2))
+
+dsaltss_list <- list(A3_HeLa, A3_HepG2, A5_HeLa, A5_HepG2)
+names(dsaltss_list) <- c('ALT 3SS HeLa', 'ALT 3SS HepG2', 'ALT 5SS HeLa', 'ALT 5SS HepG2')
+```
+
+Make upset plot alternative splice sites
+```{r, make upset plot all alternative splice sites events in HeLa and HepG2}
+intersection_ss_ids <- upset(fromList(dsaltss_list), text.scale = 1.5, nintersects = NA, 
+                                  mb.ratio = c(0.7, 0.3), 
+                                  point.size = 5, order.by = 'freq', keep.order = T,
+                                  sets = rev(names(dsaltss_list)),
+                                  main.bar.color = "gray16") 
+```
+
+Show the number and overlap of events found by each method with an upset plot:
+
+```{r, all ss in HeLa and HepG2, fig.width = 6.1, fig.height = 5}
+intersection_ss_ids
+```
+
+```{r, save upset plot alt splice sites interactions, message = FALSE, warning = FALSE}
+cairo_pdf(file = file.path(plot_dir, '21_overlap_alt_splice_sites_Upset.pdf'), 
+          width = 6.1, height = 5, bg = NA)
+intersection_introns_ids
+dev.off()
+```
+
+
+## By method
+
+Plot how many differentially Spliced Events by method? This code doesn't separate between exons or introns but only between up or down-regulated events. 
+
+Check the number of DSE found by each method.
+
+```{r, make list of DSEs by method}
+dse_list_HeLa <- list(up_cmpr_HeLa$EVENT, do_cmpr_HeLa$EVENT,
+                      up_tidy_HeLa$EVENT, do_tidy_HeLa$EVENT,
+                      up_diff_HeLa$EVENT, do_diff_HeLa$EVENT )
+ 
+names(dse_list_HeLa) <- c('UP HeLa CMPR', 'DOWN HeLa CMPR',
+                          'UP HeLa TIDY', 'DOWN HeLa TIDY',
+                          'UP HeLa DIFF', 'DOWN HeLa DIFF' )
+
+dse_list_HepG2 <- list(up_cmpr_HepG2$EVENT, do_cmpr_HepG2$EVENT,
+                       up_tidy_HepG2$EVENT, do_tidy_HepG2$EVENT,
+                       up_diff_HepG2$EVENT, do_diff_HepG2$EVENT)
+
+names(dse_list_HepG2) <- c('UP HepG2 CMPR', 'DOWN HepG2 CMPR',
+                          'UP HepG2 TIDY', 'DOWN HepG2 TIDY',
+                          'UP HepG2 DIFF', 'DOWN HepG2 DIFF')
+```
+
+```{r, make upset plot all dse events by method}
+intersection_methods_HeLa <- upset(fromList(dse_list_HeLa), nsets = length(dse_list_HeLa),
+                                   text.scale = 1.5, nintersects = NA, 
+                                   mb.ratio = c(0.6, 0.4), decreasing = c(T, F),
+                                   order.by = 'freq', main.bar.color = "gray16") 
+```
+
+Show the number and overlap of events found by each method with an upset plot:
+
+```{r, show_upset_plot_all by method, fig.width = 6, fig.height = 4}
+intersection_methods_HeLa
+```
+
+```{r, save upset plot method interactions by method, message = FALSE, warning = FALSE}
+cairo_pdf(file = file.path(plot_dir, '22_overlap_HeLa_methods_ex_introns_Upset.pdf'), 
+          width = 6, height = 4, bg = NA)
+intersection_methods_HeLa
+dev.off()
+```
+
+Extract the HeLa bona fide (found by 3 different methods) UP and DOWN events
+
+```{r, bona dive events shared by 3 methods up and down in HeLa}
+dse_list_HeLa_UP <- list(up_cmpr_HeLa$EVENT, up_tidy_HeLa$EVENT,
+                         up_diff_HeLa$EVENT)
+
+# find events that are more included in all 3 methods comparisons
+BF_events_HeLa_UP <- Reduce(intersect, lapply(dse_list_HeLa_UP, function(x) x ) )
+
+message("Num. events diff. upregulated in all 3 methods in HeLa: ", length(BF_events_HeLa_UP),
+        "\nEvent: ", BF_events_HeLa_UP)
+
+dse_list_HeLa_DO <- list(do_cmpr_HeLa$EVENT, do_tidy_HeLa$EVENT, do_diff_HeLa$EVENT)
+
+# find events that are more skipped in all 3 methods comparisons
+BF_events_HeLa_DO <- Reduce(intersect, lapply(dse_list_HeLa_DO, function(x) x ) )
+
+message("Num. events diff. downregulated in all 3 methods in HeLa: ", length(BF_events_HeLa_DO),
+        "\nEvents: ", paste0(BF_events_HeLa_DO, collapse = ", ") )
+```
+
+Now for HepG2
+
+```{r, make upset plot all dse events found HepG2}
+intersection_methods_HepG2 <- upset(fromList(dse_list_HepG2), nsets = length(dse_list_HepG2),
+                                   text.scale = 1.5, nintersects = NA, 
+                                   mb.ratio = c(0.6, 0.4), decreasing = c(T, F),
+                                   order.by = 'freq', main.bar.color = "gray16") 
+```
+
+Show the number and overlap of events found by each method with an upset plot:
+
+```{r, show_upset_plot_all_HepG2, fig.width = 6, fig.height = 4}
+intersection_methods_HepG2
+```
+
+Save to pdf the HepG2 plot.
+
+```{r, save upset plot method interactions HepG2, message = FALSE, warning = FALSE}
+cairo_pdf(file = file.path(plot_dir, '22_overlap_HepG2_methods_ex_introns_Upset.pdf'), 
+          width = 6, height = 4, bg = NA)
+intersection_methods_HepG2
+dev.off()
+```
+
+Extract the HepG2 bona fide (found by 3 different methods) UP and DOWN events
+
+```{r, bona dive events shared by 3 methods up and down in HepG2}
+dse_list_HepG2_UP <- list(up_cmpr_HepG2$EVENT, up_tidy_HepG2$EVENT,up_diff_HepG2$EVENT)
+
+# find events that are more included in all 3 methods comparisons
+BF_events_HepG2_UP <- Reduce(intersect, lapply(dse_list_HepG2_UP, function(x) x ) )
+
+message("Num. events diff. upregulated in all 3 methods in HepG2: ", length(BF_events_HepG2_UP),
+        "\nEvent: ", paste0(BF_events_HepG2_UP, collapse = ", ") )
+
+dse_list_HepG2_DO <- list(do_cmpr_HepG2$EVENT, do_tidy_HepG2$EVENT, do_diff_HepG2$EVENT)
+
+# find events that are more skipped in all 3 methods comparisons
+BF_events_HepG2_DO <- Reduce(intersect, lapply(dse_list_HepG2_DO, function(x) x ) )
+message("Num. events diff. downregulated in all 3 methods in HepG2: ", length(dse_list_HepG2_DO) )
+```
+
+Select the best *bona fide* events that are up or down regulated in HeLa and HepG2 cells.
+
+```{r, bona dive events shared by 3 methods up and down}
+Best_SRRMS_events_IDs <- c(BF_events_HeLa_UP, BF_events_HeLa_DO, BF_events_HepG2_UP, BF_events_HepG2_DO) |> unique()
+length(Best_SRRMS_events_IDs)
+
+Best_SRRMS_events_IDs_df <- data.frame(DSE_robust_HeLa_HepG2 = sort(Best_SRRMS_events_IDs))
+```
+
+Save these exons and introns to file in case someone will need them in the future
+
+```{r, Export the bona fide events}
+write_delim(x = Best_SRRMS_events_IDs_df, col_names = T, append = F, 
+            quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, 'Bona_Fide_Diff_Spliced_Exons_Introns_SRRM2-KD_HeLa_HepG2.tab'),
+            delim = '\t')
+```
+
+::: callout-note
+In conclusion when analysing SRRM2 knockdown RNA-seq in HeLa and HepG2 from 2 different publications and using 3 different filtering methods to call for differentially spliced exons and introns, I found that only `r nrow(Best_SRRMS_events_IDs_df)` exons and introns are reliably detected in both experiments in all 3 analysis methods.
+:::
+
+# Export DSE and data
+
+::: callout-note
+Export the significant events and look for features using Matt.
+:::
+
+## Exons
+
+Calculate the intersection of up or down regulated exons between HeLa and HepG2 cells as well as the uniquely mis-spliced exons in each cell line.
+
+```{r, get common and unique exon IDs}
+EX_up_common_HH <- intersect( EX_up_HeLa,  EX_up_HepG2 )
+EX_do_common_HH <- intersect( EX_up_HepG2, EX_do_HepG2 )
+
+EX_up_uniq_HeLa <- EX_up_HeLa[ !(EX_up_HeLa %in% c(EX_up_common_HH, EX_up_HepG2) )]
+EX_do_uniq_HeLa <- EX_do_HeLa[ !(EX_do_HeLa %in% c(EX_do_common_HH, EX_do_HepG2) )] 
+
+EX_up_uniq_HepG2 <- EX_up_HepG2[ !(EX_up_HepG2 %in% c(EX_up_common_HH, EX_up_HeLa) )]
+
+EX_do_uniq_HepG2 <- EX_do_HepG2[ !(EX_do_HepG2 %in% c(EX_do_common_HH, EX_up_HeLa) )] 
+```
+
+Export to file the differentially spliced exons IDs
+
+```{r, write exon IDs}
+write_delim(x = as.data.frame(EX_up_common_HH), col_names = F, append = F, 
+            quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '1_UP_EXONS_BOTH.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(EX_do_common_HH), col_names = F, append = F, 
+            quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '2_DOWN_EXONS_BOTH.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(EX_up_uniq_HeLa), col_names = F, append = F, 
+            quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '3_UP_EXONS_HeLa.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(EX_do_uniq_HeLa), col_names = F, append = F,
+            quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '4_DOWN_EXONS_HeLa.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(EX_up_uniq_HepG2), col_names = F, append = F,
+            quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '5_UP_EXONS_HepG2.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(EX_do_uniq_HepG2), col_names = F, append = F,
+            quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '6_DOWN_EXONS_HepG2.tab'), delim = '\t')
+```
+
+## Introns
+
+Calculate the intersection of up or down regulated introns between HeLa and HepG2 cells as well as the uniquely mis-spliced introns in each cell line.
+
+```{r, calcualte intron group sets}
+IN_up_common_HH <- intersect(IN_up_HeLa, IN_up_HepG2)
+IN_do_common_HH <- intersect(IN_do_HeLa, IN_do_HepG2)
+
+IN_up_uniq_HeLa <- IN_up_HeLa[ !(IN_up_HeLa %in% c(IN_up_common_HH, IN_up_HepG2)) ]
+IN_do_uniq_HeLa <- IN_do_HeLa[ !(IN_do_HeLa %in% c(IN_do_common_HH, IN_do_HepG2)) ] 
+
+IN_up_uniq_HepG2 <- IN_up_HepG2[ !(IN_up_HepG2 %in% c(IN_up_common_HH, IN_up_HeLa)) ]
+IN_do_uniq_HepG2 <- IN_do_HepG2[ !(IN_do_HepG2 %in% c(IN_do_common_HH, IN_do_HeLa)) ] 
+```
+
+Export to file the differentially spliced introns IDs
+
+```{r, write introns IDs}
+write_delim(x = as.data.frame(IN_up_common_HH), col_names = F, append = F, 
+            quote = 'none', escape = 'none', delim = '\t',
+            file = file.path(dse_IDs_dir, '1_UP_INTRONS_BOTH.tab') )
+
+write_delim(x = as.data.frame(IN_do_common_HH), col_names = F, append = F,
+            quote = 'none', escape = 'none', delim = '\t',
+            file = file.path(dse_IDs_dir, '2_DOWN_INTRONS_BOTH.tab') )
+
+write_delim(x = as.data.frame(IN_up_uniq_HeLa), col_names = F, append = F,
+            quote = 'none', escape = 'none', delim = '\t',
+            file = file.path(dse_IDs_dir, '3_UP_INTRONS_HeLa.tab') )
+
+write_delim(x = as.data.frame(IN_do_uniq_HeLa), col_names = F, append = F,
+            quote = 'none', escape = 'none', delim = '\t',
+            file = file.path(dse_IDs_dir, '4_DOWN_INTRONS_HeLa.tab') )
+
+write_delim(x = as.data.frame(IN_up_uniq_HepG2), col_names = F, append = F,
+            quote = 'none', escape = 'none', delim = '\t',
+            file = file.path(dse_IDs_dir, '5_UP_INTRONS_HepG2.tab') )
+
+write_delim(x = as.data.frame(IN_do_uniq_HepG2), col_names = F, append = F,
+            quote = 'none', escape = 'none', delim = '\t',
+            file = file.path(dse_IDs_dir, '6_DOWN_INTRONS_HepG2.tab'))
+```
+
+## Alternative 3' and 5' splice sites
+
+```{r, make list altDA}
+A3_common <- A3_HeLa[(A3_HeLa %in% A3_HepG2)] 
+A5_common <- A5_HeLa[(A5_HeLa %in% A5_HepG2)] 
+
+A3_uniqHeLa <- A3_HeLa[!A3_HeLa %in% A3_HepG2]
+stopifnot(length(A3_uniqHeLa) + length(A3_common) == length(A3_HeLa))
+
+A3_uniqHepG2 <- A3_HepG2[!(A3_HepG2 %in% A3_HeLa)]
+stopifnot(length(A3_uniqHepG2) + length(A3_common) == length(A3_HepG2))
+
+A5_uniqHeLa <- A5_HeLa[!A5_HeLa %in% A5_HepG2]
+stopifnot(length(A5_uniqHeLa) + length(A5_common) == length(A5_HeLa))
+
+A5_uniqHepG2 <- A5_HepG2[!(A5_HepG2 %in% A5_HeLa)]
+stopifnot(length(A5_uniqHepG2) + length(A5_common) == length(A5_HepG2))
+```
+
+Export to file the differentially spliced splice sites IDs
+
+```{r, export alt splice sites}
+write_delim(x = as.data.frame(A3_common), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '1_ALT_ACCEPTOR_SPLICE_SITES_BOTH.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(A5_common), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '2_ALT_DONOR_SPLICE_SITES_BOTH.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(A3_uniqHeLa), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '3_ALT_ACCEPTOR_SPLICE_SITES_HeLa.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(A3_uniqHepG2), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '4_ALT_ACCEPTOR_SPLICE_SITES_HepG2.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(A5_uniqHeLa), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '5_ALT_DONOR_SPLICE_SITES_HeLa.tab'), delim = '\t')
+
+write_delim(x = as.data.frame(A5_uniqHepG2), col_names = F, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '6_ALT_DONOR_SPLICE_SITES_HepG2.tab'), delim = '\t')
+```
+
+## Combine all into one dataframe
+
+```{r, make dataframe of unique events}
+rbind(
+  data.frame(EXPERIMENT = 'HeLa-SRRM2-KD',
+             TYPE = "Exon",
+             EVENT = c(EX_up_common_HH, EX_up_uniq_HeLa),
+             DIRECTION = 'UP'),
+  
+  data.frame(EXPERIMENT = 'HepG2-SRRM2-KD',
+             TYPE = "Exon",
+             EVENT = c(EX_up_common_HH, EX_up_uniq_HepG2),
+             DIRECTION = 'UP'),
+  
+  data.frame(EXPERIMENT = 'HeLa-SRRM2-KD',
+             TYPE = "Exon",
+             EVENT = c(EX_do_common_HH, EX_do_uniq_HeLa),
+             DIRECTION = 'DOWN'),
+  
+  data.frame(EXPERIMENT = 'HepG2-SRRM2-KD',
+             TYPE = "Exon",
+             EVENT = c(EX_do_common_HH, EX_do_uniq_HepG2),
+             DIRECTION = 'DOWN')
+) -> exons_IDs
+
+rbind(
+  data.frame(EXPERIMENT = 'HeLa-SRRM2-KD',
+             TYPE = "Intron",
+             EVENT = c(IN_up_common_HH, IN_up_uniq_HeLa),
+             DIRECTION = 'UP'),
+  
+  data.frame(EXPERIMENT = 'HepG2-SRRM2-KD',
+             TYPE = "Intron",
+             EVENT = c(IN_up_common_HH, IN_up_uniq_HepG2),
+             DIRECTION = 'UP'),
+  
+  data.frame(EXPERIMENT = 'HeLa-SRRM2-KD',
+             TYPE = "Intron",
+             EVENT = c(IN_do_common_HH, IN_do_uniq_HeLa),
+             DIRECTION = 'DOWN'),
+  
+  data.frame(EXPERIMENT = 'HepG2-SRRM2-KD',
+             TYPE = "Intron",
+             EVENT = c(IN_do_common_HH, IN_do_uniq_HepG2),
+             DIRECTION = 'DOWN')
+) -> introns_IDs
+
+rbind(
+  data.frame(EXPERIMENT = 'HeLa-SRRM2-KD',
+             TYPE = "Alt. 3' ss",
+             EVENT = c(A3_common, A3_uniqHeLa)),
+  
+  data.frame(EXPERIMENT = 'HepG2-SRRM2-KD',
+             TYPE = "Alt. 3' ss",
+             EVENT = c(A3_common, A3_uniqHepG2)),
+  
+  data.frame(EXPERIMENT = 'HeLa-SRRM2-KD',
+             TYPE = "Alt. 5' ss",
+             EVENT = c(A5_common, A5_uniqHeLa)),
+  
+  data.frame(EXPERIMENT = 'HepG2-SRRM2-KD',
+             TYPE = "Alt. 5' ss",
+             EVENT = c(A5_common, A5_uniqHepG2))
+) -> alt_splice_sites_IDs
+
+alt_splice_sites_IDs$DIRECTION = 'BOTH'
+
+shared_and_uniq_AS_events <- rbind(exons_IDs, introns_IDs, alt_splice_sites_IDs)
+```
+
+Save to file
+```{r, write DSE}
+write_delim(x = shared_and_uniq_AS_events, col_names = T, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '0_ALL_SHARED_UNIQUE_ALT_SPLICED_EVENTS.tab'), delim = '\t')
+```
+
+## Annotate the differentially spliced events
+
+```{r, read to file shared and unique}
+SHR_UNI_AS_events <- read_delim(file = file.path(dse_IDs_dir, '0_ALL_SHARED_UNIQUE_ALT_SPLICED_EVENTS.tab'),
+                                delim = '\t', quote = 'none', 
+                                col_names = T, show_col_types = FALSE)
+```
+
+Annotate these events by fetching the PSI and coordinates from the main inclusion table.
+
+```{r, tell about getting IDs details to annotate them}
+fetch_diff_IDs <- unique(SHR_UNI_AS_events$EVENT)
+message(length(fetch_diff_IDs), ' events to get info... this may take some time')
+```
+
+This next step might take some time to process.
+
+```{r, fetch all dse info, eval = TRUE}
+grep_psi(inclusion_tbl = psi_path, vst_id = fetch_diff_IDs) |>
+  tidy_vst_psi() -> shr_uni_psi_df
+```
+
+Merge all the differentially spliced events with the annotation data.
+3.
+```{r, annotate the DSE table, eval = TRUE}
+DSE_tbl <- right_join(x = SHR_UNI_AS_events, y = shr_uni_psi_df, by = join_by(EVENT), multiple = "all")
+```
+
+Export the annotated differentially spliced events.
+
+```{r, export dataframe of the annotated differentially spliced events with PSI, eval = TRUE}
+stopifnot( length(unique(SHR_UNI_AS_events$EVENT)) == length(unique(DSE_tbl$EVENT)) )
+
+write_delim(x = DSE_tbl, col_names = T, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '0_ALL_SHARED_UNIQUE_ALT_SPLICED_EVENTS_PSI.tab'),
+            delim = '\t')
+```
+
+Import this table instead of processing it every time.
+
+```{r, read to file shared and unique PSI events}
+DSE_tbl <- read_delim(file = file.path(dse_IDs_dir, '0_ALL_SHARED_UNIQUE_ALT_SPLICED_EVENTS_PSI.tab'),
+                                delim = '\t', quote = 'none', 
+                                col_names = T, show_col_types = FALSE)
+```
+
+Filter out all the samples not needed in this analysisi.
+
+```{r, filter out samples from DSE table}
+DSE_tbl_HeLa <- subset(DSE_tbl, EXPERIMENT == "HeLa-SRRM2-KD") |>
+  subset(!grepl(Sample, pattern = '^HepG2')) |>
+  subset(grepl(Sample, pattern = 'CNTRL|SRRM2'))
+
+DSE_tbl_HepG2 <- subset(DSE_tbl, EXPERIMENT == "HepG2-SRRM2-KD") |>
+  subset(!grepl(Sample, pattern = '^HeLa')) |>
+  subset(grepl(Sample, pattern = 'CNTRL|SRRM2'))
+```
+
+Define samples and supersample groups in the HeLa dataset
+
+```{r, define SRRM2 HeLa samples}
+mrgd_cntrl <- "HeLa_CNTRL"
+mrgd_SRRM2 <- "HeLa_SRRM2"
+
+CNTRLKD <- c("HeLa_CNTRL_A", "HeLa_CNTRL_B", "HeLa_CNTRL_C")
+SRRM2KD <- c("HeLa_SRRM2_A", "HeLa_SRRM2_B", "HeLa_SRRM2_C")
+```
+
+Calculate ∆PSIs for TAF dataset.
+
+```{r, dPSI calculation on all DSE events}
+dPSI_thshld <- 15
+
+DSE_tbl_HeLa |>
+  group_by(EVENT) |>
+  summarise(mPSI_CNTRL = mean(PSI[Sample %in% mrgd_cntrl], na.rm = T),
+            mPSI_SRRM2 = mean(PSI[Sample %in% mrgd_SRRM2], na.rm = T) ) |>
+  mutate(dPSI_SRRM2 = mPSI_SRRM2 - mPSI_CNTRL ) |>
+  subset( is.finite(dPSI_SRRM2) ) |>
+  select(EVENT, dPSI_SRRM2) |>
+  unique() |>
+  # Add the ∆PSI of the filtered events to the original data frame
+  left_join(y = DSE_tbl_HeLa, by = join_by(EVENT)) |>
+  relocate(GENE, .before = EVENT) |>
+  relocate(starts_with('dPSI'), .after = PSI) |>
+  select(GENE, EVENT, starts_with('dPSI')) |>
+  rename(dPSI_SRRM2_HeLa = dPSI_SRRM2) |>
+  unique() |>
+  mutate(AS_TYPE = case_when( grepl(pattern = "^HsaALTA", x = EVENT) ~ 'Alt. Acceptor',
+                              grepl(pattern = "^HsaALTD", x = EVENT) ~ 'Alt. Donor',
+                              grepl(pattern = "^HsaINT", x = EVENT) ~ 'Intron',
+                              grepl(pattern = "^HsaEX", x = EVENT) ~ 'Exon') ) |>
+  relocate(AS_TYPE, .after = EVENT) |>
+  mutate(direction_SRRM2_HeLa = case_when( dPSI_SRRM2_HeLa >= dPSI_thshld ~ 'UP',
+                                           dPSI_SRRM2_HeLa <= -dPSI_thshld ~ 'DOWN',
+                                           between(dPSI_SRRM2_HeLa, left = -dPSI_thshld, right = dPSI_thshld) ~ 'NONE') ) |>
+  mutate(direction_SRRM2_HeLa = factor(direction_SRRM2_HeLa, levels = c('UP', 'DOWN', 'NONE'))) |>
+  arrange(direction_SRRM2_HeLa, desc(dPSI_SRRM2_HeLa)) -> tidy_dPSI_SRRM2_HeLa
+
+```
+
+Note: these ∆PSIs are are calculated from the mean ∆PSI, similarly to how vast-tools compare would calcualte them, so the events that are found differentially spliced with the `diff` method are labelled as "`NONE`" because they are below `r dPSI_thshld` PSI.
+
+```{r, show that some dPSI of DSE are labelled as NONE}
+head(subset(tidy_dPSI_SRRM2_HeLa, direction_SRRM2_HeLa == "NONE"))
+```
+
+Export the annotated differentially spliced events.
+
+```{r, export dataframe of the annotated differentially spliced events with dPSI HeLa}
+write_delim(x = tidy_dPSI_SRRM2_HeLa, col_names = T, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '0_ALL_SHARED_UNIQUE_ALT_SPLICED_EVENTS_dPSI_HeLa.tab'),
+            delim = '\t')
+```
+
+Define HepG2 samples
+```{r, define Hep2 samples and supersample}
+mrgd_cntrl <- "HepG2_CNTRL"
+mrgd_SRRM2 <- "HepG2_SRRM2"
+
+CNTRLKD <- c("HepG2_CNTRL_A", "HepG2_CNTRL_B", "HepG2_CNTRL_C")
+SRRM2KD <- c("HepG2_SRRM2_Aa", "HepG2_SRRM2_Ab",
+             "HepG2_SRRM2_Ba", "HepG2_SRRM2_Bb",
+             "HepG2_SRRM2_Ca", "HepG2_SRRM2_Cb")
+```
+
+Calculate ∆PSI in HepG2 cells.
+
+```{r, dPSI calculation on all DSE events HepG2}
+DSE_tbl_HepG2 |>
+  group_by(EVENT) |>
+  summarise(mPSI_CNTRL = mean(PSI[Sample %in% mrgd_cntrl], na.rm = T),
+            mPSI_SRRM2 = mean(PSI[Sample %in% mrgd_SRRM2], na.rm = T) ) |>
+  # calculate ∆PSI
+  mutate(dPSI_SRRM2 = mPSI_SRRM2 - mPSI_CNTRL ) |>
+  subset( is.finite(dPSI_SRRM2) ) |>
+  select(EVENT, dPSI_SRRM2) |>
+  unique() |>
+  # Add the ∆PSI of the filtered events to the original data frame
+  left_join(y = DSE_tbl_HepG2, by = join_by(EVENT)) |>
+  relocate(GENE, .before = EVENT) |>
+  relocate(starts_with('dPSI'), .after = PSI) |>
+  select(GENE, EVENT, starts_with('dPSI')) |>
+  rename(dPSI_SRRM2_HepG2 = dPSI_SRRM2) |>
+  unique() |>
+  mutate(AS_TYPE = case_when( grepl(pattern = "^HsaALTA", x = EVENT) ~ 'Alt. Acceptor',
+                              grepl(pattern = "^HsaALTD", x = EVENT) ~ 'Alt. Donor',
+                              grepl(pattern = "^HsaINT", x = EVENT) ~ 'Intron',
+                              grepl(pattern = "^HsaEX", x = EVENT) ~ 'Exon') ) |>
+  relocate(AS_TYPE, .after = EVENT) |>
+  mutate(direction_SRRM2_HepG2 = case_when( dPSI_SRRM2_HepG2 >= dPSI_thshld ~ 'UP',
+                                       dPSI_SRRM2_HepG2 <= -dPSI_thshld ~ 'DOWN',
+                                           between(dPSI_SRRM2_HepG2, left = -dPSI_thshld, right = dPSI_thshld) ~ 'NONE') ) |>
+  mutate(direction_SRRM2_HepG2 = factor(direction_SRRM2_HepG2, levels = c('UP', 'DOWN', 'NONE'))) |>
+  arrange(direction_SRRM2_HepG2, desc(dPSI_SRRM2_HepG2)) -> tidy_dPSI_SRRM2_HepG2
+```
+
+Export the annotated differentially spliced events.
+
+```{r, export dataframe of the annotated differentially spliced events with dPSI HepG2}
+write_delim(x = tidy_dPSI_SRRM2_HepG2, col_names = T, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '0_ALL_SHARED_UNIQUE_ALT_SPLICED_EVENTS_dPSI_HepG2.tab'),
+            delim = '\t')
+```
+
+Generate a complete supplementary table for the paper.
+
+```{r, generate supplementary table HeLa}
+Supp_Tbl_SRRM2_HeLa <-
+    left_join(x = tidy_dPSI_SRRM2_HeLa, y = DSE_tbl_HeLa, by = join_by(EVENT, GENE) ) |>
+    select( !c(TYPE, Quality_Score_Type, direction_SRRM2_HeLa) ) |>
+    relocate(EVENT, .after = GENE) |>
+    relocate(AS_TYPE, .after = COMPLEX) |>
+    relocate(EXPERIMENT, .before = GENE) |>
+    relocate(dPSI_SRRM2_HeLa, .after = PSI) |>
+    relocate(DIRECTION, .after = Quality_Score_Value) |>
+    unique() |>
+    arrange(AS_TYPE, desc(dPSI_SRRM2_HeLa))
+```
+
+The direction column indicates which event are up or down regulated in SRRM2-KD alone or are both up&down regulated since they are alternative splice sites.
+
+```{r, check direction HeLa}
+Supp_Tbl_SRRM2_HeLa |>
+    select(EVENT, DIRECTION) |>
+    unique() |>
+    pull(DIRECTION) |>
+    table()
+
+Supp_Tbl_SRRM2_HeLa |>
+    select(EVENT, AS_TYPE) |>
+    unique() |>
+    pull(AS_TYPE) |>
+    table()
+```
+
+Write to file as a tab delimited file.
+
+```{r, export a supplementary table HeLa}
+write_delim(x = Supp_Tbl_SRRM2_HeLa, col_names = T, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '0_HeLa_Supplemtentary_Table_DSE_SHARED_UNIQUE.tab'),
+            delim = '\t')
+```
+
+Now create a supplementary table for the HepG2, just in case it will be needed.
+
+```{r, generate supplementary table HepG2}
+Supp_Tbl_SRRM2_HepG2 <- 
+    left_join(x = tidy_dPSI_SRRM2_HepG2, y = DSE_tbl_HepG2, , by = join_by(EVENT, GENE) ) |>
+    select(!c(TYPE, Quality_Score_Type, direction_SRRM2_HepG2)) |>
+    relocate(EVENT, .after = GENE) |>
+    relocate(AS_TYPE, .after = COMPLEX) |>
+    relocate(EXPERIMENT, .before = GENE) |>
+    relocate(dPSI_SRRM2_HepG2, .after = PSI) |>
+    relocate(DIRECTION, .after = Quality_Score_Value) |>
+    unique() |>
+    arrange(AS_TYPE, desc(dPSI_SRRM2_HepG2))
+```
+
+The direction column indicates which event are up or down regulated in SRRM2-KD alone or are both up&down regulated since they are alternative splice sites.
+
+```{r, check direction HepG2}
+Supp_Tbl_SRRM2_HepG2 |>
+    select(EVENT, DIRECTION) |>
+    unique() |>
+    pull(DIRECTION) |>
+    table()
+
+Supp_Tbl_SRRM2_HepG2 |>
+    select(EVENT, AS_TYPE) |>
+    unique() |>
+    pull(AS_TYPE) |>
+    table()
+```
+
+Write to file as a tab delimited file.
+
+```{r, export a supplementary table HepG2}
+write_delim(x = Supp_Tbl_SRRM2_HepG2, col_names = T, append = F, quote = 'none', escape = 'none',
+            file = file.path(dse_IDs_dir, '0_HepG2_Supplemtentary_Table_DSE_SHARED_UNIQUE.tab'),
+            delim = '\t')
+```
 
 # Conclusion
 
 ::: callout-note
-I need to finish this part. 
+The interesting observation is that there's a little overlap between between HeLa and HepG2 SRRM2 KD.
 :::
+
+Further exploration would be required to understand if this is a cell-line specific effect of a different batch issue. Analyzing SRRM2-KD in other cellular context could shed some light on this observation.
 
 # Session Info {#sec-sessioninfo}
 
 ```{r, print session info}
 sessioninfo::session_info()
 ```
+
+## Quarto
+
+This document is generated using Quarto which enables to weave together content and executable code into a finished document. This is an improved version of what used to be called 'Rmarkdown'. The document hides all code chunks, but they can be opened up with the drop down arrow. On the top right corner there's a toggle for dark-mode. To learn more about Quarto see [here](https://quarto.org).
