@@ -1,6 +1,5 @@
-![Static Badge](https://img.shields.io/badge/Language-Quarto_(RMarkdown)-8A2BE2?style=plastic) 
+![Static Badge](https://img.shields.io/badge/Language-Quarto_(RMarkdown)-8A2BE2?style=plastic)[![DOI](https://zenodo.org/badge/681742199.svg)](https://doi.org/10.5281/zenodo.14965771)
 
-[![DOI](https://zenodo.org/badge/xxxx.svg)](https://zenodo.org/doi/xxxx/zenodo.10xxxx)
 
 # 🧬 Project Overview
 
